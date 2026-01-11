@@ -21,7 +21,7 @@
 - 🚀 **Z-image Turbo Model**: Integrates the latest Z-image turbo bf16 model, optimized for fast high-quality image generation
   - ⚡ Ultra-fast Generation: High-quality images with just 9 sampling steps
   - 🎯 Precise Prompt Understanding: Based on advanced CLIP and UNET architecture
-  - 💎 Commercial Quality: Supports 1536x1536 high-resolution output
+  - 💎 Commercial Quality: Supports 1920x1920+ high-resolution output
   - 🔧 Flexible Configuration: Supports custom sampling steps, CFG guidance scale, and other parameters
 - 🌐 **Multiple AI Provider Support**: Ollama (Local) / OpenRouter (Cloud) / OpenAI (Official) / Custom API
 - 🔄 **Dynamic Model Fetching**: Real-time retrieval of latest available model lists, supports 350+ cloud models
