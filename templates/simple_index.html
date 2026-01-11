@@ -1,0 +1,3209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="app.title">树状图像生成系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            text-align: center;
+            color: #4a5568;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            text-align: center;
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .input-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-warning {
+            background: #f6ad55;
+            color: white;
+            border: 2px solid #ed8936;
+        }
+
+        .btn-warning:hover {
+            background: #ed8936;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(237, 137, 54, 0.3);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .tree-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .node-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .node-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .node-card.generating {
+            border-color: #f6ad55;
+            background: linear-gradient(45deg, #fff 0%, #fef5e7 100%);
+        }
+
+        .node-card.completed {
+            border-color: #48bb78;
+        }
+
+        .node-card.failed {
+            border-color: #f56565;
+            background: linear-gradient(45deg, #fff 0%, #fed7d7 100%);
+        }
+
+        .node-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .node-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .node-prompt {
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .node-prompt:hover {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .node-prompt-editing {
+            background: white !important;
+            border: 2px solid #667eea !important;
+            cursor: text;
+        }
+
+        .prompt-edit-input {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            line-height: 1.4;
+            resize: vertical;
+            outline: none;
+        }
+
+        .prompt-edit-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            justify-content: flex-end;
+        }
+
+        .prompt-edit-hint {
+            font-size: 11px;
+            color: #718096;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .node-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .keyword-tag {
+            background: #edf2f7;
+            color: #4a5568;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .keyword-tag:hover {
+            background: #e2e8f0;
+        }
+
+        .keyword-tag.selected {
+            background: #667eea;
+            color: white;
+            border-color: #5a67d8;
+        }
+
+        .node-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .node-actions .btn-small {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .quality-score {
+            background: #48bb78;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .branch-version {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .branch-direction {
+            background: #f6ad55;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-pending { background: #cbd5e0; }
+        .status-ready { background: #4299e1; }
+        .status-generating { background: #f6ad55; }
+        .status-completed { background: #48bb78; }
+        .status-failed { background: #f56565; }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .auto-generation-indicator {
+            background: linear-gradient(45deg, #f6ad55, #f093fb);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            background: white;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-left: 4px solid #48bb78;
+            z-index: 1001;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            border-left-color: #f56565;
+        }
+
+        .notification.warning {
+            border-left-color: #f6ad55;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .branch-container {
+            margin-left: 40px;
+            border-left: 2px solid #e2e8f0;
+            padding-left: 20px;
+            margin-top: 20px;
+        }
+
+        .node-level-0 { margin-left: 0; }
+        .node-level-1 { margin-left: 20px; }
+        .node-level-2 { margin-left: 40px; }
+        .node-level-3 { margin-left: 60px; }
+
+        /* 全屏预览样式 */
+        .fullscreen-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+        }
+
+        .fullscreen-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-content {
+            position: relative;
+            max-width: 95%;
+            max-height: 95%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .fullscreen-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 2001;
+        }
+
+        .fullscreen-close:hover {
+            color: #ccc;
+        }
+
+        /* 导航按钮 */
+        .nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 2001;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .nav-prev {
+            left: 30px;
+        }
+
+        .nav-next {
+            right: 30px;
+        }
+
+        /* 图像信息面板 */
+        .image-info-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 300px;
+            z-index: 2001;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .image-info-panel.hidden {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+            pointer-events: none;
+        }
+
+        /* 信息面板切换按钮 */
+        .info-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 2002;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-toggle:hover {
+            background: rgba(0, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+
+        .version-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+
+        /* 四格对比视图 */
+        .grid-view {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            width: 90%;
+            height: 90%;
+            max-width: 1200px;
+            max-height: 800px;
+        }
+
+        .grid-view.show {
+            display: grid;
+        }
+
+        .grid-item {
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .grid-item-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            font-size: 12px;
+        }
+
+        /* 视图切换按钮 */
+        .view-toggle {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 2001;
+        }
+
+        .view-toggle:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* 最近树列表样式 */
+        .recent-trees-panel {
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .recent-trees-panel h4 {
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+
+        .recent-trees-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .recent-tree-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .recent-tree-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .recent-tree-prompt {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .recent-tree-meta {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .recent-tree-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        .btn-delete {
+            background: #f56565;
+            color: white;
+            border: 2px solid #e53e3e;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .btn-delete:hover {
+            background: #e53e3e;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
+        }
+
+        .loading-indicator {
+            text-align: center;
+            color: #718096;
+            padding: 20px;
+        }
+
+        /* 质量设置面板样式 */
+        .quality-settings-panel {
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            min-width: 600px;
+            max-width: 800px;
+        }
+
+        .quality-settings-panel h4 {
+            margin-bottom: 20px;
+            color: #4a5568;
+        }
+
+        .settings-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .setting-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            min-width: 500px;
+            overflow: visible;
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .setting-label input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .setting-input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            overflow: visible;
+            min-width: 500px;
+        }
+
+        .setting-input-group input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .setting-input-group input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .threshold-value {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .setting-description {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .setting-input-group.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .setting-input-group.disabled input[type="range"] {
+            background: #f1f5f9;
+        }
+
+        .setting-input-group.disabled .threshold-value {
+            background: #94a3b8;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .quality-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            margin-left: 8px;
+        }
+
+        .quality-indicator.high {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .quality-indicator.medium {
+            background: #fef5e7;
+            color: #744210;
+        }
+
+        .quality-indicator.low {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .image-container {
+            position: relative;
+            text-align: center;
+        }
+
+        .image-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .image-container:hover .image-info {
+            opacity: 1;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .node-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .fullscreen-close {
+                font-size: 30px;
+                top: 10px;
+                right: 15px;
+            }
+            
+            .info-toggle {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+                top: 15px;
+                left: 15px;
+            }
+            
+            .image-info {
+                font-size: 10px;
+                padding: 3px 6px;
+            }
+            
+            .image-info-panel {
+                min-width: 250px;
+                padding: 12px 20px;
+                bottom: 20px;
+            }
+        }
+
+        /* 选择框样式优化 */
+        select {
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        select option {
+            padding: 6px 12px;
+            white-space: nowrap;
+            overflow: visible;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        /* 确保系统设置中的选择框有足够宽度 */
+        .setting-input-group select {
+            min-width: 200px;
+            max-width: 100%;
+        }
+        
+        /* AI 模型选择框特殊样式 */
+        #aiModel {
+            min-width: 450px !important;
+            max-width: 600px !important;
+            width: 450px !important;
+            font-family: 'Courier New', monospace !important;
+            font-size: 12px !important;
+            overflow: visible !important;
+        }
+        
+        #aiModel option {
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            width: auto;
+            min-width: 450px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .node-card {
+                padding: 15px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 data-i18n="app.title">🌳 树状图像生成系统</h1>
+                <p data-i18n="app.description">通过分支探索，发现无限创意可能</p>
+            </div>
+            <div id="language-switcher" style="min-width: 120px;">
+                <!-- 语言切换器将在这里动态创建 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="promptInput" data-i18n-placeholder="main.input_placeholder" placeholder="输入你的创意提示词，例如：一只可爱的小猫咪" />
+                <button class="btn btn-primary" onclick="createTree()">
+                    <span id="createBtnText" data-i18n="main.generate_button">🚀 开始创作</span>
+                    <span id="createBtnLoading" class="loading" style="display: none;"></span>
+                </button>
+                <button class="btn btn-secondary" onclick="toggleRecentTrees()" data-i18n="nav.history">📋 最近创作</button>
+                <button class="btn btn-secondary" onclick="toggleSystemSettings()" data-i18n="nav.settings">⚙️ 系统设置</button>
+            </div>
+            
+            <!-- 最近树列表 -->
+            <div id="recentTreesPanel" class="recent-trees-panel" style="display: none;">
+                <h4 data-i18n="history.title">📋 最近的创作</h4>
+                <div id="recentTreesList" class="recent-trees-list">
+                    <div class="loading-indicator">加载中...</div>
+                </div>
+            </div>
+            
+            <!-- 系统设置面板 -->
+            <div id="systemSettingsPanel" class="quality-settings-panel" style="display: none;">
+                <h4 data-i18n="settings.title">⚙️ 系统设置</h4>
+                <div class="settings-grid">
+                    <!-- AI 提供商配置 -->
+                    <div class="setting-item">
+                        <h5 style="color: #4a5568; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;" data-i18n="settings.ai_provider">🤖 AI 提供商配置</h5>
+                        
+                        <label class="setting-label" data-i18n="settings.provider_type">提供商类型</label>
+                        <div class="setting-input-group">
+                            <select id="aiProviderType" style="flex: 1; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                    onchange="updateAIProvider('provider_type', this.value)">
+                                <option value="ollama" data-i18n="providers.ollama">Ollama (本地)</option>
+                                <option value="openrouter" data-i18n="providers.openrouter">OpenRouter (云端)</option>
+                                <option value="openai" data-i18n="providers.openai">OpenAI (官方)</option>
+                                <option value="openai_compatible" data-i18n="providers.custom">OpenAI 兼容</option>
+                            </select>
+                        </div>
+                        <div class="setting-description">选择AI服务提供商类型</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;" data-i18n="settings.server_address">服务器地址</label>
+                        <div class="setting-input-group">
+                            <input type="text" id="aiBaseUrl" placeholder="http://192.168.100.249:11434" 
+                                   style="flex: 1; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                   onchange="updateAIProvider('base_url', this.value)">
+                            <span id="baseUrlStatus" style="margin-left: 8px; font-size: 12px;">🔧</span>
+                        </div>
+                        <div class="setting-description">AI服务的完整 URL 地址</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;" data-i18n="settings.api_key">API 密钥 (可选)</label>
+                        <div class="setting-input-group">
+                            <input type="password" id="aiApiKey" placeholder="留空表示无需密钥" 
+                                   style="flex: 1; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                   onchange="updateAIProvider('api_key', this.value)">
+                            <button type="button" onclick="toggleApiKeyVisibility()" 
+                                    style="margin-left: 8px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f7fafc; cursor: pointer;"
+                                    title="显示/隐藏密钥">👁️</button>
+                        </div>
+                        <div class="setting-description">云端服务需要API密钥，本地服务可留空</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">模型选择</label>
+                        <div class="setting-input-group">
+                            <select id="aiModel" style="width: 450px; min-width: 450px; max-width: 600px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; overflow: visible;"
+                                    onchange="updateAIProvider('model', this.value)">
+                                <option value="">加载中...</option>
+                            </select>
+                            <button class="btn btn-secondary btn-small" onclick="refreshAIModels()" title="刷新模型列表" style="margin-left: 8px;">🔄</button>
+                            <button class="btn btn-secondary btn-small" onclick="testAIProvider()" title="测试连接" style="margin-left: 8px;">🧪</button>
+                        </div>
+                        <div class="setting-description">选择用于提示词优化和图像评估的模型 | <span id="modelSource" style="color: #718096;"></span></div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">高级参数</label>
+                        <div class="setting-input-group">
+                            <label style="margin-right: 15px;">最大令牌数:</label>
+                            <input type="number" id="aiMaxTokens" min="100" max="32000" value="4000" 
+                                   style="width: 100px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                   onchange="updateAIProvider('max_tokens', parseInt(this.value))">
+                            <label style="margin: 0 15px 0 20px;">温度:</label>
+                            <input type="number" id="aiTemperature" min="0" max="2" step="0.1" value="0.7" 
+                                   style="width: 80px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                   onchange="updateAIProvider('temperature', parseFloat(this.value))">
+                        </div>
+                        <div class="setting-description">调整AI生成参数：令牌数控制输出长度，温度控制创造性</div>
+                    </div>
+                    
+                    <!-- ComfyUI 配置 -->
+                    <div class="setting-item">
+                        <h5 style="color: #4a5568; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">🎨 ComfyUI 配置</h5>
+                        
+                        <label class="setting-label">服务器地址</label>
+                        <div class="setting-input-group">
+                            <input type="text" id="comfyuiUrl" placeholder="http://192.168.100.249:8000" 
+                                   style="flex: 1; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                   onchange="updateSystemSetting('comfyui_url', this.value)">
+                        </div>
+                        <div class="setting-description">ComfyUI 服务器的完整 URL 地址</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">采样步数</label>
+                        <div class="setting-input-group">
+                            <input type="range" id="samplingSteps" min="1" max="50" step="1" value="9" 
+                                   oninput="updateThresholdDisplay('steps', this.value)" 
+                                   onchange="updateSystemSetting('sampling_steps', parseInt(this.value))">
+                            <span id="stepsThresholdValue" class="threshold-value">9</span>
+                        </div>
+                        <div class="setting-description">图像生成的采样步数，越高质量越好但速度越慢</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">CFG 引导强度</label>
+                        <div class="setting-input-group">
+                            <input type="range" id="cfgScale" min="0.1" max="20" step="0.1" value="1.0" 
+                                   oninput="updateThresholdDisplay('cfg', this.value)" 
+                                   onchange="updateSystemSetting('cfg_scale', parseFloat(this.value))">
+                            <span id="cfgThresholdValue" class="threshold-value">1.0</span>
+                        </div>
+                        <div class="setting-description">提示词引导强度，影响生成图像与提示词的匹配度</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">图像尺寸</label>
+                        <div class="setting-input-group">
+                            <select id="imageSize" style="flex: 1; min-width: 180px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                    onchange="updateSystemSetting('image_size', this.value)">
+                                <option value="1024x1024">1024×1024 (标准)</option>
+                                <option value="1536x1536">1536×1536 (高清)</option>
+                                <option value="768x1024">768×1024 (竖屏)</option>
+                                <option value="1024x768">1024×768 (横屏)</option>
+                                <option value="512x512">512×512 (快速)</option>
+                            </select>
+                        </div>
+                        <div class="setting-description">生成图像的分辨率大小</div>
+                    </div>
+                    
+                    <!-- 质量控制设置 -->
+                    <div class="setting-item">
+                        <h5 style="color: #4a5568; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">🔍 质量控制</h5>
+                        
+                        <label class="setting-label">
+                            <input type="checkbox" id="qualityEnabled" onchange="updateSystemSetting('enabled', this.checked)">
+                            启用质量检查
+                        </label>
+                        <div class="setting-description">开启后会自动检查生成图像的质量</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">
+                            <input type="checkbox" id="qualityCheckEnabled" onchange="updateSystemSetting('quality_check_enabled', this.checked); toggleThresholdInput('scoreThreshold', this.checked)">
+                            启用质量评分检查
+                        </label>
+                        <div class="setting-input-group">
+                            <input type="range" id="scoreThreshold" min="0" max="10" step="0.1" value="7.0" 
+                                   oninput="updateThresholdDisplay('score', this.value)" 
+                                   onchange="updateSystemSetting('score_threshold', parseFloat(this.value))">
+                            <span id="scoreThresholdValue" class="threshold-value">7.0</span>
+                        </div>
+                        <div class="setting-description">🚀 关闭可提升生成速度 | 低于此分数的图像将被重新生成</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">
+                            <input type="checkbox" id="accuracyCheckEnabled" onchange="updateSystemSetting('accuracy_check_enabled', this.checked); toggleThresholdInput('accuracyThreshold', this.checked)">
+                            启用准确度检查
+                        </label>
+                        <div class="setting-input-group">
+                            <input type="range" id="accuracyThreshold" min="0" max="10" step="0.1" value="7.0" 
+                                   oninput="updateThresholdDisplay('accuracy', this.value)" 
+                                   onchange="updateSystemSetting('accuracy_threshold', parseFloat(this.value))">
+                            <span id="accuracyThresholdValue" class="threshold-value">7.0</span>
+                        </div>
+                        <div class="setting-description">🚀 关闭可提升生成速度 | 与原始提示词的匹配度阈值</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">
+                            <input type="checkbox" id="autoRetry" onchange="updateSystemSetting('auto_retry', this.checked)">
+                            自动重试
+                        </label>
+                        <div class="setting-description">质量不达标时自动重新生成</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">最大重试次数</label>
+                        <div class="setting-input-group">
+                            <input type="range" id="maxRetries" min="0" max="5" step="1" value="2" 
+                                   oninput="updateThresholdDisplay('retries', this.value)" 
+                                   onchange="updateSystemSetting('max_retries', parseInt(this.value))">
+                            <span id="maxRetriesValue" class="threshold-value">2</span>
+                        </div>
+                        <div class="setting-description">每个图像的最大重试次数</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">
+                            <input type="checkbox" id="strictMode" onchange="updateSystemSetting('strict_mode', this.checked)">
+                            严格模式
+                        </label>
+                        <div class="setting-description">启用更严格的质量检查标准</div>
+                        
+                        <label class="setting-label" style="margin-top: 12px;">
+                            <input type="checkbox" id="defectDetection" onchange="updateSystemSetting('defect_detection', this.checked)">
+                            缺陷检测
+                        </label>
+                        <div class="setting-description">检测常见的AI生成缺陷</div>
+                    </div>
+                </div>
+                
+                <div class="settings-actions">
+                    <button class="btn btn-primary btn-small" onclick="saveSystemSettings()">💾 保存设置</button>
+                    <button class="btn btn-secondary btn-small" onclick="resetSystemSettings()">🔄 重置默认</button>
+                    <button class="btn btn-warning btn-small" onclick="forceResetSystemSettings()">🔧 强制重置</button>
+                    <button class="btn btn-secondary btn-small" onclick="debugSystemSettings()">🐛 调试信息</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tree-container">
+            <div id="treeVisualization">
+                <div class="empty-state">
+                    <h3>🎨 准备开始你的创意之旅</h3>
+                    <p>输入一个简单的提示词，系统将为你生成一棵创意树</p>
+                    <p>每个节点都可以继续分支，探索不同的创意方向</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知组件 -->
+    <div id="notification" class="notification">
+        <div id="notificationText"></div>
+    </div>
+
+    <!-- 全屏预览组件 -->
+    <div id="fullscreenOverlay" class="fullscreen-overlay" onclick="closeFullscreen(event)">
+        <button class="view-toggle" onclick="toggleView(event)">切换视图</button>
+        <span class="fullscreen-close" onclick="closeFullscreen(event)">&times;</span>
+        
+        <!-- 单图预览 -->
+        <div id="singleView" class="fullscreen-content">
+            <button id="navPrev" class="nav-button nav-prev" onclick="navigateImage(-1, event)">‹</button>
+            <img id="fullscreenImage" class="fullscreen-image" alt="Full Screen Preview">
+            <button id="navNext" class="nav-button nav-next" onclick="navigateImage(1, event)">›</button>
+            
+            <!-- 信息面板切换按钮 -->
+            <button id="infoToggle" class="info-toggle" onclick="toggleInfoPanel(event)" title="显示/隐藏图像信息">ℹ️</button>
+            
+            <div id="imageInfoPanel" class="image-info-panel hidden">
+                <div id="versionBadge" class="version-badge"></div>
+                <div id="imagePrompt"></div>
+                <div id="imageQuality"></div>
+                <div id="imageIndex"></div>
+            </div>
+        </div>
+        
+        <!-- 四格对比视图 -->
+        <div id="gridView" class="grid-view">
+            <div class="grid-item">
+                <img id="gridImage0" alt="Grid Image 1">
+                <div id="gridInfo0" class="grid-item-info"></div>
+            </div>
+            <div class="grid-item">
+                <img id="gridImage1" alt="Grid Image 2">
+                <div id="gridInfo1" class="grid-item-info"></div>
+            </div>
+            <div class="grid-item">
+                <img id="gridImage2" alt="Grid Image 3">
+                <div id="gridInfo2" class="grid-item-info"></div>
+            </div>
+            <div class="grid-item">
+                <img id="gridImage3" alt="Grid Image 4">
+                <div id="gridInfo3" class="grid-item-info"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentTree = null;
+        let selectedKeywords = {};
+        let pollingIntervals = {};
+        let generatingBranches = new Set(); // 跟踪正在生成分支的节点
+
+        // 创建生成树
+        async function createTree() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+                showNotification('请输入提示词', 'warning');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('createBtnText').style.display = 'none';
+            document.getElementById('createBtnLoading').style.display = 'inline-block';
+
+            try {
+                const response = await fetch('/api/create_tree', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    currentTree = data;
+                    renderTree(data.tree);
+                    showNotification('创意树创建成功！', 'success');
+                    
+                    // 开始自动刷新以显示关键词更新
+                    startAutoRefresh();
+                    
+                    // 开始轮询关键词提取状态
+                    if (data.keywords_task_id) {
+                        pollTask(data.keywords_task_id, (result) => {
+                            updateNodeKeywords(data.root_id, result);
+                        });
+                    }
+                } else {
+                    showNotification('创建失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('网络错误', 'error');
+            } finally {
+                // 恢复按钮状态
+                document.getElementById('createBtnText').style.display = 'inline';
+                document.getElementById('createBtnLoading').style.display = 'none';
+            }
+        }
+
+        // 轮询任务状态
+        function pollTask(taskId, onComplete, onFailed) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/check_task/${taskId}`);
+                    const task = await response.json();
+                    
+                    if (task.status === 'completed') {
+                        clearInterval(interval);
+                        delete pollingIntervals[taskId];
+                        if (onComplete) onComplete(task.result);
+                    } else if (task.status === 'failed') {
+                        clearInterval(interval);
+                        delete pollingIntervals[taskId];
+                        if (onFailed) onFailed(task.error);
+                        else showNotification('任务失败: ' + (task.error || '未知错误'), 'error');
+                    }
+                } catch (error) {
+                    console.error('轮询错误:', error);
+                    // 网络错误时不清除轮询，继续尝试
+                }
+            }, 2000);
+            
+            pollingIntervals[taskId] = interval;
+        }
+
+
+        // 渲染生成树
+        function renderTree(treeData) {
+            const container = document.getElementById('treeVisualization');
+            container.innerHTML = '';
+
+            // 创建根节点
+            const rootNode = treeData.nodes[treeData.root_id];
+            renderNode(rootNode, container, 0);
+        }
+
+        // 渲染单个节点
+        function renderNode(nodeData, container, level) {
+            const nodeElement = createNodeElement(nodeData, level);
+            container.appendChild(nodeElement);
+
+            // 渲染子节点
+            if (nodeData.children && nodeData.children.length > 0) {
+                const branchContainer = document.createElement('div');
+                branchContainer.className = 'branch-container';
+                
+                nodeData.children.forEach(childId => {
+                    if (currentTree && currentTree.tree.nodes[childId]) {
+                        renderNode(currentTree.tree.nodes[childId], branchContainer, level + 1);
+                    }
+                });
+                
+                container.appendChild(branchContainer);
+            }
+        }
+
+        // 创建节点元素
+        function createNodeElement(nodeData, level) {
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = `node-card ${nodeData.status} node-level-${level}`;
+            nodeDiv.id = `node-${nodeData.node_id}`;
+
+            let imageHtml = '';
+            if (nodeData.image_data) {
+                imageHtml = `
+                    <div class="image-container">
+                        <img src="data:image/png;base64,${nodeData.image_data}" 
+                             class="node-image" 
+                             alt="Generated Image"
+                             onclick="showFullscreen(this.src, '${nodeData.node_id}')"
+                             title="点击查看大图 - 支持同级导航和四格对比">
+                        <div class="image-info">点击查看大图</div>
+                    </div>
+                `;
+            }
+
+            let qualityHtml = '';
+            if (nodeData.quality_score > 0) {
+                const qualityClass = nodeData.quality_score >= 8 ? 'high' : 
+                                   nodeData.quality_score >= 6 ? 'medium' : 'low';
+                const qualityIcon = nodeData.quality_score >= 8 ? '🟢' : 
+                                  nodeData.quality_score >= 6 ? '🟡' : '🔴';
+                
+                qualityHtml = `
+                    <div class="quality-score">
+                        质量: ${nodeData.quality_score.toFixed(1)}/10
+                        <span class="quality-indicator ${qualityClass}">${qualityIcon}</span>
+                    </div>
+                `;
+                
+                // 如果有准确度评分，也显示
+                if (nodeData.accuracy_score > 0) {
+                    const accuracyClass = nodeData.accuracy_score >= 8 ? 'high' : 
+                                        nodeData.accuracy_score >= 6 ? 'medium' : 'low';
+                    qualityHtml += `
+                        <div class="quality-score" style="margin-top: 4px;">
+                            准确度: ${nodeData.accuracy_score.toFixed(1)}/10
+                            <span class="quality-indicator ${accuracyClass}">🎯</span>
+                        </div>
+                    `;
+                }
+                
+                // 显示重新生成提示
+                if (nodeData.image_data) {
+                    qualityHtml += `
+                        <div style="font-size: 11px; color: #718096; margin-top: 4px;">
+                            💡 不满意？点击"重新生成"按钮
+                        </div>
+                    `;
+                }
+            }
+
+            let branchInfoHtml = '';
+            if (nodeData.branch_info) {
+                branchInfoHtml = `
+                    <div class="branch-version">${nodeData.branch_info.version}</div>
+                    ${nodeData.branch_info.branch_direction !== 'root' ? 
+                        `<div class="branch-direction">${nodeData.branch_info.branch_direction}</div>` : 
+                        ''
+                    }
+                `;
+            }
+
+            let keywordsHtml = '';
+            if (nodeData.keywords && nodeData.keywords.length > 0) {
+                keywordsHtml = '<div class="node-keywords">' +
+                    nodeData.keywords.map(kw => 
+                        `<span class="keyword-tag" onclick="toggleKeyword('${nodeData.node_id}', '${kw.text}')">${kw.text}</span>`
+                    ).join('') +
+                    '</div>';
+            }
+
+            const statusText = getStatusText(nodeData.status);
+
+            nodeDiv.innerHTML = `
+                <div>
+                    <span class="status-indicator status-${nodeData.status}"></span>
+                    ${statusText}
+                </div>
+                ${branchInfoHtml}
+                ${qualityHtml}
+                ${imageHtml}
+                <div class="node-prompt" onclick="editPrompt('${nodeData.node_id}')" title="点击编辑提示词">
+                    ${nodeData.prompt}
+                    <div class="prompt-edit-hint">💡 点击编辑提示词</div>
+                </div>
+                ${keywordsHtml}
+                <div class="node-actions">
+                    ${nodeData.status === 'generating' ? 
+                        `<span class="loading"></span> <span style="color: #f6ad55;">正在生成图像...</span>` : 
+                        ''
+                    }
+                    ${nodeData.image_data ? 
+                        `<button class="btn btn-secondary btn-small" onclick="downloadImage('${nodeData.node_id}')">📥 下载图像</button>
+                         <button class="btn btn-warning btn-small" onclick="regenerateImage('${nodeData.node_id}')" title="重新生成此图像">🔄 重新生成</button>` : 
+                        ''
+                    }
+                    <button class="btn btn-secondary btn-small" onclick="editPrompt('${nodeData.node_id}')" title="编辑提示词">✏️ 编辑提示词</button>
+                    ${nodeData.keywords && nodeData.keywords.length > 0 && getSelectedKeywords(nodeData.node_id).length > 0 && !isGeneratingBranches(nodeData.node_id) ? 
+                        `<button class="btn btn-secondary btn-small" onclick="generateBranches('${nodeData.node_id}')">创建分支 (自动生成图像)</button>` : 
+                        ''
+                    }
+                    ${isGeneratingBranches(nodeData.node_id) ? 
+                        `<span class="loading"></span> <span style="color: #667eea;">正在创建分支...</span>` : 
+                        ''
+                    }
+                    ${nodeData.keywords && nodeData.keywords.length > 0 && getSelectedKeywords(nodeData.node_id).length === 0 ? 
+                        `<div style="color: #718096; font-size: 12px; margin-top: 5px;">💡 选择关键词后可创建分支</div>` : 
+                        ''
+                    }
+                    ${!nodeData.image_data && nodeData.status === 'ready' && (!nodeData.keywords || nodeData.keywords.length === 0) ? 
+                        `<button class="btn btn-primary btn-small" onclick="generateImage('${nodeData.node_id}')">手动生成图像</button>` : 
+                        ''
+                    }
+                    ${nodeData.image_data && (!nodeData.keywords || nodeData.keywords.length === 0) ? 
+                        `<button class="btn btn-secondary btn-small" onclick="forceExtractKeywords('${nodeData.node_id}')">🔍 提取关键词</button>
+                         <div style="color: #f6ad55; font-size: 11px; margin-top: 4px;">⚠️ 缺少关键词，无法创建分支</div>` : 
+                        ''
+                    }
+                </div>
+            `;
+
+            return nodeDiv;
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '等待中',
+                'ready': '就绪',
+                'generating': '生成中',
+                'completed': '已完成',
+                'failed': '失败'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 切换关键词选择
+        function toggleKeyword(nodeId, keyword) {
+            if (!selectedKeywords[nodeId]) {
+                selectedKeywords[nodeId] = [];
+            }
+            
+            const index = selectedKeywords[nodeId].indexOf(keyword);
+            if (index > -1) {
+                selectedKeywords[nodeId].splice(index, 1);
+            } else {
+                selectedKeywords[nodeId].push(keyword);
+            }
+            
+            // 更新UI
+            updateKeywordUI(nodeId);
+            updateNodeActions(nodeId);
+        }
+
+        // 更新关键词UI
+        function updateKeywordUI(nodeId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (nodeElement) {
+                const keywordElements = nodeElement.querySelectorAll('.keyword-tag');
+                keywordElements.forEach(el => {
+                    const keyword = el.textContent;
+                    const isSelected = selectedKeywords[nodeId] && selectedKeywords[nodeId].includes(keyword);
+                    el.classList.toggle('selected', isSelected);
+                });
+            }
+        }
+
+        // 更新节点操作按钮
+        function updateNodeActions(nodeId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (nodeElement && currentTree) {
+                const nodeData = currentTree.tree.nodes[nodeId];
+                const newElement = createNodeElement(nodeData, 0);
+                nodeElement.parentNode.replaceChild(newElement, nodeElement);
+                updateKeywordUI(nodeId);
+            }
+        }
+
+        // 获取选中的关键词
+        function getSelectedKeywords(nodeId) {
+            return selectedKeywords[nodeId] || [];
+        }
+
+        // 检查是否正在生成分支
+        function isGeneratingBranches(nodeId) {
+            return generatingBranches.has(nodeId);
+        }
+
+        // 生成图像
+        async function generateImage(nodeId) {
+            try {
+                const response = await fetch('/api/generate_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        tree_id: currentTree.tree_id,
+                        node_id: nodeId
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    updateNodeStatus(nodeId, 'generating');
+                    showNotification('开始生成图像...', 'success');
+                    
+                    // 开始轮询图像生成状态
+                    if (data.task_id) {
+                        pollTask(data.task_id, (result) => {
+                            updateNodeImage(nodeId, result);
+                        });
+                    }
+                } else {
+                    showNotification('生成失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('网络错误', 'error');
+            }
+        }
+
+        // 生成分支
+        async function generateBranches(nodeId) {
+            // 检查是否已经在生成分支
+            if (isGeneratingBranches(nodeId)) {
+                showNotification('该节点正在生成分支，请稍候...', 'warning');
+                return;
+            }
+
+            const keywords = getSelectedKeywords(nodeId);
+            if (keywords.length === 0) {
+                showNotification('请至少选择一个关键词', 'warning');
+                return;
+            }
+
+            // 检查是否已有子节点（防止重复创建）
+            if (currentTree && currentTree.tree.nodes[nodeId] && 
+                currentTree.tree.nodes[nodeId].children && 
+                currentTree.tree.nodes[nodeId].children.length > 0) {
+                const confirmed = confirm('该节点已有分支，确定要创建新的分支吗？\n\n这将创建额外的分支节点。');
+                if (!confirmed) return;
+            }
+
+            try {
+                // 标记为正在生成分支
+                generatingBranches.add(nodeId);
+                updateNodeActions(nodeId); // 更新UI显示
+
+                const response = await fetch('/api/generate_branches', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        tree_id: currentTree.tree_id,
+                        parent_id: nodeId,
+                        selected_keywords: keywords.map(kw => ({ text: kw }))
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification('正在生成分支...', 'success');
+                    
+                    // 开始轮询分支生成状态
+                    if (data.task_id) {
+                        pollTask(data.task_id, (result) => {
+                            addBranchesToTree(nodeId, result);
+                            // 完成后移除生成状态
+                            generatingBranches.delete(nodeId);
+                            updateNodeActions(nodeId);
+                        }, () => {
+                            // 失败回调：移除生成状态
+                            generatingBranches.delete(nodeId);
+                            updateNodeActions(nodeId);
+                        });
+                    }
+                } else {
+                    showNotification('生成失败: ' + data.error, 'error');
+                    // 失败时移除生成状态
+                    generatingBranches.delete(nodeId);
+                    updateNodeActions(nodeId);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('网络错误', 'error');
+                // 错误时移除生成状态
+                generatingBranches.delete(nodeId);
+                updateNodeActions(nodeId);
+            }
+        }
+
+        // 更新节点状态
+        function updateNodeStatus(nodeId, status) {
+            if (currentTree && currentTree.tree.nodes[nodeId]) {
+                currentTree.tree.nodes[nodeId].status = status;
+                updateNodeActions(nodeId);
+            }
+        }
+
+        // 更新节点图像
+        function updateNodeImage(nodeId, data) {
+            if (currentTree && currentTree.tree.nodes[nodeId]) {
+                const node = currentTree.tree.nodes[nodeId];
+                node.image_data = data.image_data;
+                node.quality_score = data.quality_score;
+                node.keywords = data.keywords;
+                node.status = 'completed';
+                
+                updateNodeActions(nodeId);
+                showNotification('图像生成完成！', 'success');
+            }
+        }
+
+        // 更新节点关键词
+        function updateNodeKeywords(nodeId, keywords) {
+            if (currentTree && currentTree.tree.nodes[nodeId]) {
+                currentTree.tree.nodes[nodeId].keywords = keywords;
+                currentTree.tree.nodes[nodeId].status = 'ready';
+                updateNodeActions(nodeId);
+                showNotification('关键词提取完成！', 'success');
+            }
+        }
+
+        // 添加分支到树
+        function addBranchesToTree(parentId, children) {
+            if (currentTree && currentTree.tree.nodes[parentId]) {
+                children.forEach(child => {
+                    currentTree.tree.nodes[child.node_id] = {
+                        node_id: child.node_id,
+                        prompt: child.prompt,
+                        parent_id: parentId,
+                        children: [],
+                        keywords: [],
+                        status: 'generating',  // 设置为生成中状态
+                        image_data: null,
+                        quality_score: 0,
+                        branch_info: {
+                            level: 1,
+                            branch_index: 0,
+                            branch_direction: child.direction || '分支',
+                            version: 'v2.0'
+                        }
+                    };
+                    currentTree.tree.nodes[parentId].children.push(child.node_id);
+                });
+                
+                renderTree(currentTree.tree);
+                showNotification('分支创建完成，正在自动生成图像...', 'success');
+                
+                // 开始轮询分支图像生成状态
+                startBranchImagePolling(parentId);
+            }
+        }
+
+        // 轮询分支图像生成状态
+        function startBranchImagePolling(parentId) {
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/check_branch_images/${currentTree.tree_id}/${parentId}`);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        // 检查是否有节点状态变化
+                        let hasChanges = false;
+                        data.children.forEach(childStatus => {
+                            if (currentTree.tree.nodes[childStatus.node_id]) {
+                                const node = currentTree.tree.nodes[childStatus.node_id];
+                                
+                                // 检查状态变化
+                                if (node.status !== childStatus.status) {
+                                    node.status = childStatus.status;
+                                    hasChanges = true;
+                                }
+                                
+                                // 检查图像数据变化
+                                if (childStatus.has_image && !node.image_data) {
+                                    hasChanges = true;
+                                }
+                                
+                                // 检查关键词变化
+                                if (childStatus.has_keywords && (!node.keywords || node.keywords.length === 0)) {
+                                    hasChanges = true;
+                                }
+                            }
+                        });
+                        
+                        // 如果有变化，刷新完整数据
+                        if (hasChanges) {
+                            await refreshTreeData();
+                        } else {
+                            // 如果没有变化，只更新显示
+                            renderTree(currentTree.tree);
+                        }
+                        
+                        // 检查是否全部完成
+                        if (data.all_completed) {
+                            clearInterval(pollInterval);
+                            // 最后一次刷新确保所有数据都是最新的
+                            await refreshTreeData();
+                            showNotification(`🎉 所有分支图像生成完成！(${data.completed_count}/${data.total_children})`, 'success');
+                        } else {
+                            // 显示进度
+                            const progress = `${data.completed_count}/${data.total_children}`;
+                            const completedWithKeywords = data.children.filter(c => c.status === 'completed' && c.has_keywords).length;
+                            console.log(`分支图像生成进度: ${progress}, 关键词提取: ${completedWithKeywords}/${data.total_children}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('轮询分支状态失败:', error);
+                }
+            }, 3000); // 每3秒检查一次
+            
+            // 存储轮询间隔，以便清理
+            pollingIntervals[`branch_${parentId}`] = pollInterval;
+        }
+
+        // 刷新树数据
+        async function refreshTreeData() {
+            if (!currentTree) return;
+            
+            try {
+                const response = await fetch(`/api/get_tree/${currentTree.tree_id}`);
+                if (response.ok) {
+                    const treeData = await response.json();
+                    currentTree.tree = treeData;
+                    // 重新渲染树以显示更新的数据
+                    renderTree(currentTree.tree);
+                }
+            } catch (error) {
+                console.error('刷新树数据失败:', error);
+            }
+        }
+
+        // 强制提取关键词
+        async function forceExtractKeywords(nodeId) {
+            if (!currentTree) return;
+            
+            try {
+                showNotification('正在提取关键词...', 'success');
+                
+                const response = await fetch(`/api/force_extract_keywords/${currentTree.tree_id}/${nodeId}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // 更新节点关键词
+                    if (currentTree.tree.nodes[nodeId]) {
+                        currentTree.tree.nodes[nodeId].keywords = data.keywords;
+                        updateNodeActions(nodeId);
+                        showNotification(`✅ 关键词提取完成！(${data.count}个)`, 'success');
+                    }
+                } else {
+                    showNotification('❌ 关键词提取失败: ' + (data.error || '未知错误'), 'error');
+                }
+            } catch (error) {
+                console.error('强制提取关键词失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        // 重新生成图像
+        async function regenerateImage(nodeId) {
+            if (!currentTree) return;
+            
+            // 确认对话框
+            const confirmed = confirm('确定要重新生成这张图像吗？\n\n这将替换当前图像，操作不可撤销。');
+            if (!confirmed) return;
+            
+            try {
+                // 更新节点状态为生成中
+                if (currentTree.tree.nodes[nodeId]) {
+                    currentTree.tree.nodes[nodeId].status = 'generating';
+                    currentTree.tree.nodes[nodeId].image_data = null;
+                    renderTree(currentTree.tree);
+                }
+                
+                showNotification('🔄 开始重新生成图像...', 'success');
+                
+                const response = await fetch('/api/regenerate_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        tree_id: currentTree.tree_id,
+                        node_id: nodeId
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification('⏳ 图像重新生成中，请稍候...', 'success');
+                    
+                    // 开始轮询重新生成状态
+                    if (data.task_id) {
+                        pollTask(data.task_id, (result) => {
+                            updateNodeImage(nodeId, result);
+                            showNotification('✅ 图像重新生成完成！', 'success');
+                        });
+                    }
+                } else {
+                    showNotification('❌ 重新生成失败: ' + data.error, 'error');
+                    // 恢复节点状态
+                    await refreshTreeData();
+                }
+            } catch (error) {
+                console.error('重新生成图像失败:', error);
+                showNotification('❌ 网络错误', 'error');
+                // 恢复节点状态
+                await refreshTreeData();
+            }
+        }
+
+        // 下载图像
+        function downloadImage(nodeId) {
+            if (currentTree) {
+                window.open(`/api/download_image/${currentTree.tree_id}/${nodeId}`, '_blank');
+            }
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notificationText');
+            
+            text.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // 回车键创建树
+        document.getElementById('promptInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                createTree();
+            }
+        });
+
+        // 全屏预览相关变量
+        let currentSiblings = [];
+        let currentImageIndex = 0;
+        let isGridView = false;
+
+        // 全屏预览功能
+        async function showFullscreen(imageSrc, nodeId) {
+            const overlay = document.getElementById('fullscreenOverlay');
+            const image = document.getElementById('fullscreenImage');
+            
+            // 获取同级分支数据
+            try {
+                const response = await fetch(`/api/get_siblings/${currentTree.tree_id}/${nodeId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentSiblings = data.siblings;
+                    currentImageIndex = data.current_index;
+                    
+                    // 显示当前图像
+                    updateFullscreenImage();
+                    
+                    // 更新导航按钮状态
+                    updateNavigationButtons();
+                    
+                    // 设置四格视图
+                    setupGridView();
+                } else {
+                    // 如果获取同级失败，显示单张图片
+                    image.src = imageSrc;
+                    updateImageInfo(null);
+                }
+            } catch (error) {
+                console.error('获取同级分支失败:', error);
+                image.src = imageSrc;
+                updateImageInfo(null);
+            }
+            
+            overlay.classList.add('show');
+            
+            // 阻止事件冒泡
+            if (event) event.stopPropagation();
+        }
+
+        function updateFullscreenImage() {
+            if (currentSiblings.length === 0) return;
+            
+            const currentSibling = currentSiblings[currentImageIndex];
+            const image = document.getElementById('fullscreenImage');
+            
+            image.src = `data:image/png;base64,${currentSibling.image_data}`;
+            updateImageInfo(currentSibling);
+        }
+
+        function updateImageInfo(sibling) {
+            const versionBadge = document.getElementById('versionBadge');
+            const imagePrompt = document.getElementById('imagePrompt');
+            const imageQuality = document.getElementById('imageQuality');
+            const imageIndex = document.getElementById('imageIndex');
+            
+            if (sibling) {
+                versionBadge.textContent = sibling.branch_info.version;
+                imagePrompt.textContent = sibling.prompt;
+                imageQuality.textContent = `质量评分: ${sibling.quality_score.toFixed(1)}/10`;
+                imageIndex.textContent = `${currentImageIndex + 1} / ${currentSiblings.length}`;
+            } else {
+                versionBadge.textContent = '';
+                imagePrompt.textContent = '';
+                imageQuality.textContent = '';
+                imageIndex.textContent = '';
+            }
+        }
+
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('navPrev');
+            const nextBtn = document.getElementById('navNext');
+            
+            prevBtn.disabled = currentImageIndex <= 0;
+            nextBtn.disabled = currentImageIndex >= currentSiblings.length - 1;
+            
+            // 如果只有一张图片，隐藏导航按钮
+            if (currentSiblings.length <= 1) {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+            } else {
+                prevBtn.style.display = 'block';
+                nextBtn.style.display = 'block';
+            }
+        }
+
+        function navigateImage(direction, event) {
+            event.stopPropagation();
+            
+            const newIndex = currentImageIndex + direction;
+            if (newIndex >= 0 && newIndex < currentSiblings.length) {
+                currentImageIndex = newIndex;
+                updateFullscreenImage();
+                updateNavigationButtons();
+            }
+        }
+
+        function setupGridView() {
+            for (let i = 0; i < 4; i++) {
+                const gridImage = document.getElementById(`gridImage${i}`);
+                const gridInfo = document.getElementById(`gridInfo${i}`);
+                
+                if (i < currentSiblings.length) {
+                    const sibling = currentSiblings[i];
+                    gridImage.src = `data:image/png;base64,${sibling.image_data}`;
+                    gridInfo.innerHTML = `
+                        <div>${sibling.branch_info.version} - ${sibling.branch_info.branch_direction}</div>
+                        <div>质量: ${sibling.quality_score.toFixed(1)}/10</div>
+                    `;
+                    gridImage.style.display = 'block';
+                } else {
+                    gridImage.style.display = 'none';
+                    gridInfo.innerHTML = '';
+                }
+            }
+        }
+
+        function toggleView(event) {
+            event.stopPropagation();
+            
+            const singleView = document.getElementById('singleView');
+            const gridView = document.getElementById('gridView');
+            const toggleBtn = event.target;
+            
+            isGridView = !isGridView;
+            
+            if (isGridView) {
+                singleView.style.display = 'none';
+                gridView.classList.add('show');
+                toggleBtn.textContent = '单图视图';
+            } else {
+                singleView.style.display = 'flex';
+                gridView.classList.remove('show');
+                toggleBtn.textContent = '四格对比';
+            }
+        }
+
+        function closeFullscreen(event) {
+            if (event) event.stopPropagation();
+            
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.classList.remove('show');
+            
+            // 重置视图
+            const singleView = document.getElementById('singleView');
+            const gridView = document.getElementById('gridView');
+            const toggleBtn = document.querySelector('.view-toggle');
+            
+            singleView.style.display = 'flex';
+            gridView.classList.remove('show');
+            toggleBtn.textContent = '四格对比';
+            isGridView = false;
+        }
+
+        // 切换信息面板显示/隐藏
+        function toggleInfoPanel(event) {
+            if (event) event.stopPropagation();
+            
+            const infoPanel = document.getElementById('imageInfoPanel');
+            const toggleBtn = document.getElementById('infoToggle');
+            
+            if (infoPanel.classList.contains('hidden')) {
+                infoPanel.classList.remove('hidden');
+                toggleBtn.title = '隐藏图像信息';
+            } else {
+                infoPanel.classList.add('hidden');
+                toggleBtn.title = '显示图像信息';
+            }
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeFullscreen();
+            } else if (e.key === 'ArrowLeft') {
+                navigateImage(-1, e);
+            } else if (e.key === 'ArrowRight') {
+                navigateImage(1, e);
+            } else if (e.key === 'i' || e.key === 'I') {
+                // I键切换信息面板
+                const overlay = document.getElementById('fullscreenOverlay');
+                if (overlay.classList.contains('show')) {
+                    toggleInfoPanel();
+                }
+            }
+        });
+
+        // 调试函数
+        function debugNodeInfo(nodeId) {
+            if (currentTree && currentTree.tree.nodes[nodeId]) {
+                const node = currentTree.tree.nodes[nodeId];
+                console.log('节点调试信息:', {
+                    nodeId: nodeId,
+                    status: node.status,
+                    hasKeywords: node.keywords && node.keywords.length > 0,
+                    keywords: node.keywords,
+                    selectedKeywords: getSelectedKeywords(nodeId),
+                    hasImage: !!node.image_data,
+                    branchInfo: node.branch_info
+                });
+            }
+        }
+
+        // 添加全局调试函数
+        window.debugNode = debugNodeInfo;
+
+        // 系统设置相关变量
+        let currentSystemSettings = {};
+
+        // 系统设置面板功能
+        async function toggleSystemSettings() {
+            const panel = document.getElementById('systemSettingsPanel');
+            const isVisible = panel.style.display !== 'none';
+            
+            if (isVisible) {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                await loadSystemSettings();
+            }
+        }
+
+        async function loadSystemSettings() {
+            try {
+                const response = await fetch('/api/system_settings');
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSystemSettings = data.settings;
+                    
+                    // 先加载 AI 模型列表
+                    await loadAIModels();
+                    
+                    // 然后更新 UI
+                    updateSystemSettingsUI(data.settings);
+                } else {
+                    showNotification('❌ 加载设置失败', 'error');
+                }
+            } catch (error) {
+                console.error('加载系统设置失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        async function loadOllamaModels() {
+            try {
+                const response = await fetch('/api/ollama_models');
+                const data = await response.json();
+                
+                const modelSelect = document.getElementById('ollamaModel');
+                const modelSource = document.getElementById('modelSource');
+                
+                if (data.success && data.models.length > 0) {
+                    // 清空现有选项
+                    modelSelect.innerHTML = '';
+                    
+                    // 添加模型选项
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // 更新来源信息
+                    if (data.source === 'ollama_server') {
+                        modelSource.textContent = `✅ 从 Ollama 服务器获取 (${data.count} 个模型)`;
+                        modelSource.style.color = '#48bb78';
+                    } else {
+                        modelSource.textContent = `⚠️ 使用默认列表 (${data.count} 个模型)`;
+                        modelSource.style.color = '#f6ad55';
+                        if (data.error) {
+                            modelSource.textContent += ` - ${data.error}`;
+                        }
+                    }
+                    
+                    console.log(`加载了 ${data.count} 个 Ollama 模型:`, data.models);
+                } else {
+                    // 加载失败，使用默认选项
+                    modelSelect.innerHTML = `
+                        <option value="ministral-3:latest">ministral-3:latest</option>
+                        <option value="llama3.2:latest">llama3.2:latest</option>
+                        <option value="qwen2.5:latest">qwen2.5:latest</option>
+                        <option value="gemma2:latest">gemma2:latest</option>
+                        <option value="phi3:latest">phi3:latest</option>
+                    `;
+                    modelSource.textContent = '❌ 加载失败，使用默认列表';
+                    modelSource.style.color = '#f56565';
+                }
+            } catch (error) {
+                console.error('加载 Ollama 模型失败:', error);
+                
+                // 网络错误，使用默认选项
+                const modelSelect = document.getElementById('ollamaModel');
+                const modelSource = document.getElementById('modelSource');
+                
+                modelSelect.innerHTML = `
+                    <option value="ministral-3:latest">ministral-3:latest</option>
+                    <option value="llama3.2:latest">llama3.2:latest</option>
+                    <option value="qwen2.5:latest">qwen2.5:latest</option>
+                    <option value="gemma2:latest">gemma2:latest</option>
+                    <option value="phi3:latest">phi3:latest</option>
+                `;
+                modelSource.textContent = '❌ 网络错误，使用默认列表';
+                modelSource.style.color = '#f56565';
+            }
+        }
+
+        async function refreshAIModels() {
+            try {
+                showNotification('🔄 正在刷新模型列表...', 'success');
+                
+                const modelSelect = document.getElementById('aiModel');
+                const currentValue = modelSelect.value;
+                const providerType = document.getElementById('aiProviderType').value;
+                
+                // 显示加载状态
+                modelSelect.innerHTML = '<option value="">刷新中...</option>';
+                
+                // 使用刷新API获取最新模型列表
+                const baseUrl = document.getElementById('aiBaseUrl').value;
+                const apiKey = document.getElementById('aiApiKey').value;
+                
+                const response = await fetch(`/api/refresh_provider_models/${providerType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        base_url: baseUrl,
+                        api_key: apiKey || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 更新模型列表
+                    modelSelect.innerHTML = '';
+                    
+                    // 添加默认选项
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '请选择模型...';
+                    modelSelect.appendChild(defaultOption);
+                    
+                    // 添加模型选项
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // 尝试恢复之前选择的模型
+                    if (currentValue) {
+                        const option = Array.from(modelSelect.options).find(opt => opt.value === currentValue);
+                        if (option) {
+                            modelSelect.value = currentValue;
+                        }
+                    }
+                    
+                    // 更新来源信息
+                    const sourceSpan = document.getElementById('modelSource');
+                    if (sourceSpan) {
+                        sourceSpan.textContent = `✅ ${data.message || `实时获取 ${data.count} 个模型`}`;
+                        sourceSpan.style.color = '#48bb78';
+                    }
+                    
+                    showNotification(`✅ ${data.message}`, 'success');
+                } else {
+                    // 刷新失败，回退到普通加载
+                    await loadAIModels();
+                    showNotification(`❌ 刷新失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('刷新模型列表失败:', error);
+                // 回退到普通加载
+                await loadAIModels();
+                showNotification('❌ 刷新失败: 网络错误', 'error');
+            }
+        }
+
+        async function loadAIModels() {
+            try {
+                const providerType = document.getElementById('aiProviderType').value;
+                let response;
+                
+                if (providerType === 'ollama') {
+                    // 对于Ollama，使用现有的API
+                    response = await fetch('/api/ollama_models');
+                } else {
+                    // 对于其他提供商，使用新的API
+                    response = await fetch(`/api/provider_models/${providerType}`);
+                }
+                
+                const data = await response.json();
+                const modelSelect = document.getElementById('aiModel');
+                
+                if (data.success && data.models) {
+                    modelSelect.innerHTML = '';
+                    
+                    // 添加默认选项
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '请选择模型...';
+                    modelSelect.appendChild(defaultOption);
+                    
+                    // 添加模型选项
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // 更新来源信息
+                    const sourceSpan = document.getElementById('modelSource');
+                    if (sourceSpan) {
+                        let sourceText = '';
+                        let sourceColor = '#718096';
+                        
+                        switch (data.source) {
+                            case 'live_api':
+                                sourceText = `✅ 实时获取 (${data.count} 个模型)`;
+                                sourceColor = '#48bb78';
+                                break;
+                            case 'ollama_server':
+                                sourceText = `✅ Ollama服务器 (${data.count} 个模型)`;
+                                sourceColor = '#48bb78';
+                                break;
+                            case 'config':
+                            case 'config_fallback':
+                                sourceText = `⚠️ 配置文件 (${data.count} 个模型)`;
+                                sourceColor = '#f6ad55';
+                                break;
+                            case 'default':
+                                sourceText = `⚠️ 默认列表 (${data.count} 个模型)`;
+                                sourceColor = '#f6ad55';
+                                if (data.error) {
+                                    sourceText += ` - ${data.error}`;
+                                }
+                                break;
+                            default:
+                                sourceText = `来源: ${data.source} (${data.count} 个模型)`;
+                        }
+                        
+                        sourceSpan.textContent = sourceText;
+                        sourceSpan.style.color = sourceColor;
+                    }
+                } else {
+                    modelSelect.innerHTML = '<option value="">加载失败</option>';
+                    console.error('加载模型列表失败:', data.error);
+                    
+                    const sourceSpan = document.getElementById('modelSource');
+                    if (sourceSpan) {
+                        sourceSpan.textContent = '❌ 加载失败';
+                        sourceSpan.style.color = '#f56565';
+                    }
+                }
+            } catch (error) {
+                console.error('加载模型列表失败:', error);
+                const modelSelect = document.getElementById('aiModel');
+                modelSelect.innerHTML = '<option value="">网络错误</option>';
+                
+                const sourceSpan = document.getElementById('modelSource');
+                if (sourceSpan) {
+                    sourceSpan.textContent = '❌ 网络错误';
+                    sourceSpan.style.color = '#f56565';
+                }
+            }
+        }
+
+        async function testAIProvider() {
+            try {
+                showNotification('🧪 正在测试AI提供商连接...', 'success');
+                
+                const providerType = document.getElementById('aiProviderType').value;
+                const baseUrl = document.getElementById('aiBaseUrl').value;
+                const apiKey = document.getElementById('aiApiKey').value;
+                const model = document.getElementById('aiModel').value;
+                
+                if (!providerType || !baseUrl || !model) {
+                    showNotification('❌ 请先配置提供商类型、地址和模型', 'error');
+                    return;
+                }
+                
+                const response = await fetch('/api/test_ai_provider', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        provider_type: providerType,
+                        base_url: baseUrl,
+                        api_key: apiKey || null,
+                        model: model
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(`✅ 连接测试成功！响应: ${data.result.substring(0, 50)}...`, 'success');
+                } else {
+                    showNotification(`❌ 连接测试失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('测试AI提供商失败:', error);
+                showNotification('❌ 测试失败: 网络错误', 'error');
+            }
+        }
+
+        async function updateAIProvider(key, value) {
+            try {
+                // 构建更新数据
+                const updateData = {};
+                updateData[`ai_${key}`] = value;
+                
+                // 如果更改了提供商类型，自动设置相应的默认值
+                if (key === 'provider_type') {
+                    await updateProviderDefaults(value);
+                }
+                
+                const response = await fetch('/api/system_settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(`✅ ${key} 已更新`, 'success');
+                    
+                    // 如果更改了提供商类型，重新加载模型列表
+                    if (key === 'provider_type') {
+                        await loadAIModels();
+                    }
+                } else {
+                    showNotification('❌ 更新失败: ' + data.error, 'error');
+                    // 恢复原值
+                    await loadSystemSettings();
+                }
+            } catch (error) {
+                console.error('更新AI提供商设置失败:', error);
+                showNotification('❌ 更新失败: 网络错误', 'error');
+            }
+        }
+
+        async function updateProviderDefaults(providerType) {
+            // 根据提供商类型自动设置默认值
+            const baseUrlInput = document.getElementById('aiBaseUrl');
+            const apiKeyInput = document.getElementById('aiApiKey');
+            const maxTokensInput = document.getElementById('aiMaxTokens');
+            const temperatureInput = document.getElementById('aiTemperature');
+            
+            // 获取可用提供商信息
+            try {
+                const response = await fetch('/api/available_providers');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const provider = data.providers.find(p => p.key === providerType);
+                    if (provider) {
+                        // 自动填充服务器地址
+                        baseUrlInput.value = provider.base_url;
+                        
+                        // 根据提供商类型设置界面状态
+                        if (providerType === 'ollama') {
+                            // Ollama - 本地服务，用户可能需要修改地址
+                            baseUrlInput.disabled = false;
+                            baseUrlInput.placeholder = "http://192.168.100.249:11434";
+                            apiKeyInput.disabled = true;
+                            apiKeyInput.placeholder = "本地服务无需API密钥";
+                            apiKeyInput.value = "";
+                        } else if (providerType === 'openrouter') {
+                            // OpenRouter - 固定云端地址
+                            baseUrlInput.disabled = true;
+                            baseUrlInput.placeholder = "OpenRouter官方API地址（自动设置）";
+                            apiKeyInput.disabled = false;
+                            apiKeyInput.placeholder = "请输入OpenRouter API密钥";
+                        } else if (providerType === 'openai') {
+                            // OpenAI - 固定官方地址
+                            baseUrlInput.disabled = true;
+                            baseUrlInput.placeholder = "OpenAI官方API地址（自动设置）";
+                            apiKeyInput.disabled = false;
+                            apiKeyInput.placeholder = "请输入OpenAI API密钥";
+                        } else if (providerType === 'openai_compatible') {
+                            // 自定义OpenAI兼容 - 用户需要填写地址
+                            baseUrlInput.disabled = false;
+                            baseUrlInput.placeholder = "请输入自定义API地址";
+                            apiKeyInput.disabled = false;
+                            apiKeyInput.placeholder = "API密钥（如需要）";
+                        }
+                        
+                        // 设置默认参数
+                        if (providerType === 'openrouter' || providerType === 'openai') {
+                            maxTokensInput.value = 4000;
+                            temperatureInput.value = 0.7;
+                        } else {
+                            maxTokensInput.value = 4000;
+                            temperatureInput.value = 0.7;
+                        }
+                        
+                        // 更新提示信息
+                        updateProviderHints(providerType, provider.requires_api_key);
+                    }
+                }
+            } catch (error) {
+                console.error('获取提供商信息失败:', error);
+            }
+        }
+
+        function updateProviderHints(providerType, requiresApiKey) {
+            // 更新提供商相关的提示信息
+            const baseUrlDescription = document.querySelector('.setting-input-group + .setting-description');
+            const apiKeyDescription = document.querySelectorAll('.setting-description')[2]; // API密钥的描述
+            
+            if (baseUrlDescription) {
+                switch (providerType) {
+                    case 'ollama':
+                        baseUrlDescription.textContent = 'Ollama本地服务器地址，可根据实际部署情况修改';
+                        break;
+                    case 'openrouter':
+                        baseUrlDescription.textContent = 'OpenRouter云端服务地址（自动设置，无需修改）';
+                        break;
+                    case 'openai':
+                        baseUrlDescription.textContent = 'OpenAI官方API地址（自动设置，无需修改）';
+                        break;
+                    case 'openai_compatible':
+                        baseUrlDescription.textContent = '自定义OpenAI兼容API的服务器地址';
+                        break;
+                    default:
+                        baseUrlDescription.textContent = 'AI服务的完整 URL 地址';
+                }
+            }
+            
+            if (apiKeyDescription) {
+                if (requiresApiKey) {
+                    apiKeyDescription.textContent = '此云端服务需要API密钥，请到官网获取';
+                    apiKeyDescription.style.color = '#e53e3e';
+                } else {
+                    apiKeyDescription.textContent = '本地服务无需API密钥';
+                    apiKeyDescription.style.color = '#38a169';
+                }
+            }
+        }
+
+        function toggleApiKeyVisibility() {
+            // 切换API密钥的显示/隐藏
+            const apiKeyInput = document.getElementById('aiApiKey');
+            const toggleButton = event.target;
+            
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleButton.textContent = '🙈';
+                toggleButton.title = '隐藏密钥';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleButton.textContent = '👁️';
+                toggleButton.title = '显示密钥';
+            }
+        }
+
+        async function refreshOllamaModels() {
+            // 保持向后兼容
+            await refreshAIModels();
+        }
+
+        function updateSystemSettingsUI(settings) {
+            console.log('更新系统设置UI:', settings);
+            
+            // AI 提供商设置
+            if (settings.ai_provider) {
+                const ai = settings.ai_provider;
+                document.getElementById('aiProviderType').value = ai.provider_type || 'ollama';
+                document.getElementById('aiBaseUrl').value = ai.base_url || '';
+                document.getElementById('aiApiKey').value = ai.api_key || '';
+                document.getElementById('aiModel').value = ai.model || '';
+                document.getElementById('aiMaxTokens').value = ai.max_tokens || 4000;
+                document.getElementById('aiTemperature').value = ai.temperature || 0.7;
+                
+                // 应用提供商特定的界面设置
+                updateProviderDefaults(ai.provider_type || 'ollama');
+                
+                // 加载对应提供商的模型列表
+                loadAIModels();
+            }
+            
+            // 向后兼容：如果还有旧的ollama配置，也更新AI提供商设置
+            if (settings.ollama && !settings.ai_provider) {
+                document.getElementById('aiProviderType').value = 'ollama';
+                document.getElementById('aiBaseUrl').value = settings.ollama.url || '';
+                document.getElementById('aiModel').value = settings.ollama.model || '';
+                updateProviderDefaults('ollama');
+                loadAIModels();
+            }
+            
+            // ComfyUI 设置
+            if (settings.comfyui) {
+                document.getElementById('comfyuiUrl').value = settings.comfyui.url || '';
+                document.getElementById('samplingSteps').value = settings.comfyui.sampling_steps || 9;
+                document.getElementById('cfgScale').value = settings.comfyui.cfg_scale || 1.0;
+                document.getElementById('imageSize').value = settings.comfyui.image_size || '1536x1536';
+                
+                // 更新显示值
+                updateThresholdDisplay('steps', settings.comfyui.sampling_steps || 9);
+                updateThresholdDisplay('cfg', settings.comfyui.cfg_scale || 1.0);
+            }
+            
+            // 质量控制设置
+            if (settings.quality_control) {
+                const qc = settings.quality_control;
+                document.getElementById('qualityEnabled').checked = qc.enabled !== false;
+                document.getElementById('qualityCheckEnabled').checked = qc.quality_check_enabled !== false;
+                document.getElementById('accuracyCheckEnabled').checked = qc.accuracy_check_enabled !== false;
+                document.getElementById('scoreThreshold').value = qc.score_threshold || 7.0;
+                document.getElementById('accuracyThreshold').value = qc.accuracy_threshold || 7.0;
+                document.getElementById('autoRetry').checked = qc.auto_retry !== false;
+                document.getElementById('maxRetries').value = qc.max_retries || 2;
+                document.getElementById('strictMode').checked = qc.strict_mode !== false;
+                document.getElementById('defectDetection').checked = qc.defect_detection !== false;
+                
+                // 更新显示值
+                updateThresholdDisplay('score', qc.score_threshold || 7.0);
+                updateThresholdDisplay('accuracy', qc.accuracy_threshold || 7.0);
+                updateThresholdDisplay('retries', qc.max_retries || 2);
+                
+                // 更新阈值输入的启用状态
+                toggleThresholdInput('scoreThreshold', qc.quality_check_enabled !== false);
+                toggleThresholdInput('accuracyThreshold', qc.accuracy_check_enabled !== false);
+            }
+        }
+
+        async function updateSystemSetting(key, value) {
+            try {
+                const response = await fetch('/api/system_settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        [key]: value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSystemSettings = data.settings;
+                    showNotification('✅ 设置已更新', 'success');
+                } else {
+                    showNotification('❌ 更新失败: ' + data.error, 'error');
+                    // 恢复原值
+                    await loadSystemSettings();
+                }
+            } catch (error) {
+                console.error('更新设置失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        async function saveSystemSettings() {
+            try {
+                showNotification('💾 正在保存所有设置...', 'success');
+                
+                // 收集所有设置
+                const allSettings = {
+                    ai_provider: {
+                        provider_type: document.getElementById('aiProviderType').value,
+                        name: document.getElementById('aiProviderType').selectedOptions[0].text,
+                        base_url: document.getElementById('aiBaseUrl').value.trim(),
+                        api_key: document.getElementById('aiApiKey').value.trim() || null,
+                        model: document.getElementById('aiModel').value,
+                        max_tokens: parseInt(document.getElementById('aiMaxTokens').value),
+                        temperature: parseFloat(document.getElementById('aiTemperature').value),
+                        timeout: 30,
+                        extra_params: {}
+                    },
+                    comfyui: {
+                        url: document.getElementById('comfyuiUrl').value.trim(),
+                        sampling_steps: parseInt(document.getElementById('samplingSteps').value),
+                        cfg_scale: parseFloat(document.getElementById('cfgScale').value),
+                        image_size: document.getElementById('imageSize').value
+                    },
+                    quality_control: {
+                        enabled: document.getElementById('qualityEnabled').checked,
+                        quality_check_enabled: document.getElementById('qualityCheckEnabled').checked,
+                        accuracy_check_enabled: document.getElementById('accuracyCheckEnabled').checked,
+                        score_threshold: parseFloat(document.getElementById('scoreThreshold').value),
+                        accuracy_threshold: parseFloat(document.getElementById('accuracyThreshold').value),
+                        auto_retry: document.getElementById('autoRetry').checked,
+                        max_retries: parseInt(document.getElementById('maxRetries').value),
+                        strict_mode: document.getElementById('strictMode').checked,
+                        defect_detection: document.getElementById('defectDetection').checked
+                    }
+                };
+                
+                const response = await fetch('/api/system_settings/save_all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(allSettings)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('✅ 所有设置已保存并生效', 'success');
+                    
+                    // 自动收起设置面板
+                    setTimeout(() => {
+                        const panel = document.getElementById('systemSettingsPanel');
+                        panel.style.display = 'none';
+                        showNotification('📋 设置面板已收起', 'success');
+                    }, 1500);
+                } else {
+                    showNotification('❌ 保存失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        async function resetSystemSettings() {
+            try {
+                const response = await fetch('/api/system_settings/reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateSystemSettingsUI(data.settings);
+                    showNotification('🔄 已重置为默认设置', 'success');
+                } else {
+                    showNotification('❌ 重置失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('重置设置失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        async function forceResetSystemSettings() {
+            const confirmed = confirm('确定要强制重置所有系统设置为默认值吗？\n\n这将清除所有自定义设置！');
+            if (!confirmed) return;
+            
+            try {
+                showNotification('🔧 正在强制重置设置...', 'warning');
+                
+                const response = await fetch('/api/system_settings/force_reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateSystemSettingsUI(data.settings);
+                    showNotification('✅ 系统设置已强制重置', 'success');
+                } else {
+                    showNotification('❌ 强制重置失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('强制重置失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        async function debugSystemSettings() {
+            try {
+                const response = await fetch('/api/system_settings');
+                const data = await response.json();
+                
+                console.log('=== 系统设置调试信息 ===');
+                console.log('API响应:', data);
+                console.log('当前设置:', currentSystemSettings);
+                
+                // 检查所有相关元素
+                const elements = {
+                    ollamaUrl: document.getElementById('ollamaUrl'),
+                    ollamaModel: document.getElementById('ollamaModel'),
+                    comfyuiUrl: document.getElementById('comfyuiUrl'),
+                    samplingSteps: document.getElementById('samplingSteps'),
+                    cfgScale: document.getElementById('cfgScale'),
+                    imageSize: document.getElementById('imageSize'),
+                    qualityEnabled: document.getElementById('qualityEnabled'),
+                    qualityCheckEnabled: document.getElementById('qualityCheckEnabled'),
+                    accuracyCheckEnabled: document.getElementById('accuracyCheckEnabled')
+                };
+                
+                console.log('HTML元素状态:');
+                for (const [name, element] of Object.entries(elements)) {
+                    if (element) {
+                        console.log(`${name}:`, {
+                            exists: true,
+                            value: element.value || element.checked,
+                            disabled: element.disabled
+                        });
+                    } else {
+                        console.log(`${name}: 元素不存在!`);
+                    }
+                }
+                
+                showNotification('🐛 调试信息已输出到控制台', 'success');
+            } catch (error) {
+                console.error('调试失败:', error);
+                showNotification('❌ 调试失败', 'error');
+            }
+        }
+
+        // 辅助函数
+        function updateThresholdDisplay(type, value) {
+            const displayElement = document.getElementById(`${type}ThresholdValue`) || 
+                                 document.getElementById(`max${type.charAt(0).toUpperCase() + type.slice(1)}Value`);
+            
+            if (displayElement) {
+                if (type === 'retries' || type === 'steps') {
+                    displayElement.textContent = value;
+                } else {
+                    displayElement.textContent = parseFloat(value).toFixed(1);
+                }
+            }
+        }
+
+        function toggleThresholdInput(inputId, enabled) {
+            const input = document.getElementById(inputId);
+            const inputGroup = input ? input.closest('.setting-input-group') : null;
+            
+            if (inputGroup) {
+                if (enabled) {
+                    inputGroup.classList.remove('disabled');
+                    input.disabled = false;
+                } else {
+                    inputGroup.classList.add('disabled');
+                    input.disabled = true;
+                }
+            }
+        }
+
+        // 最近树列表功能
+        async function toggleRecentTrees() {
+            const panel = document.getElementById('recentTreesPanel');
+            const isVisible = panel.style.display !== 'none';
+            
+            if (isVisible) {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                await loadRecentTrees();
+            }
+        }
+
+        async function loadRecentTrees() {
+            const listContainer = document.getElementById('recentTreesList');
+            listContainer.innerHTML = '<div class="loading-indicator">加载中...</div>';
+            
+            try {
+                const response = await fetch('/api/recent_trees');
+                const data = await response.json();
+                
+                if (data.success && data.trees.length > 0) {
+                    listContainer.innerHTML = '';
+                    
+                    data.trees.forEach(tree => {
+                        const item = document.createElement('div');
+                        item.className = 'recent-tree-item';
+                        
+                        const date = new Date(tree.created_at).toLocaleString('zh-CN');
+                        
+                        item.innerHTML = `
+                            <div onclick="loadTree('${tree.tree_id}')" style="cursor: pointer; flex: 1;">
+                                <div class="recent-tree-prompt">${tree.root_prompt}</div>
+                                <div class="recent-tree-meta">创建时间: ${date} | 状态: ${tree.status}</div>
+                            </div>
+                            <div class="recent-tree-actions">
+                                <button class="btn btn-delete btn-small" onclick="deleteTree('${tree.tree_id}', '${tree.root_prompt}', event)" title="删除此创作">🗑️ 删除</button>
+                            </div>
+                        `;
+                        
+                        // 设置item为flex布局
+                        item.style.display = 'flex';
+                        item.style.alignItems = 'center';
+                        item.style.gap = '10px';
+                        
+                        listContainer.appendChild(item);
+                    });
+                } else {
+                    listContainer.innerHTML = '<div class="loading-indicator">暂无创作记录</div>';
+                }
+            } catch (error) {
+                console.error('加载最近树列表失败:', error);
+                listContainer.innerHTML = '<div class="loading-indicator">加载失败</div>';
+            }
+        }
+
+        async function loadTree(treeId) {
+            try {
+                showNotification('正在加载创作...', 'success');
+                
+                const response = await fetch(`/api/get_tree/${treeId}`);
+                const treeData = await response.json();
+                
+                if (response.ok) {
+                    currentTree = {
+                        tree_id: treeId,
+                        tree: treeData
+                    };
+                    
+                    renderTree(treeData);
+                    document.getElementById('recentTreesPanel').style.display = 'none';
+                    showNotification('✅ 创作加载完成！', 'success');
+                    
+                    // 开始自动刷新以显示关键词更新
+                    startAutoRefresh();
+                    
+                    // 自动检查并提取缺失的关键词
+                    await autoExtractMissingKeywords(treeId);
+                } else {
+                    showNotification('❌ 加载失败: ' + treeData.error, 'error');
+                }
+            } catch (error) {
+                console.error('加载树失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        // 自动提取缺失的关键词
+        async function autoExtractMissingKeywords(treeId) {
+            try {
+                const response = await fetch(`/api/auto_extract_keywords/${treeId}`);
+                const data = await response.json();
+                
+                if (data.success && data.nodes_to_extract > 0) {
+                    showNotification(`🔍 正在为 ${data.nodes_to_extract} 个节点自动提取关键词...`, 'success');
+                    
+                    // 轮询提取进度
+                    if (data.task_id) {
+                        pollTask(data.task_id, async (result) => {
+                            if (result.success) {
+                                showNotification(`✅ 关键词自动提取完成！(${result.extracted_count}/${result.total_nodes})`, 'success');
+                                // 刷新树数据以显示新的关键词
+                                await refreshTreeData();
+                            }
+                        });
+                    }
+                } else if (data.nodes_to_extract === 0) {
+                    console.log('所有节点都已有关键词，无需提取');
+                }
+            } catch (error) {
+                console.error('自动提取关键词失败:', error);
+                // 不显示错误通知，因为这是后台操作
+            }
+        }
+
+        // 定期刷新树数据以显示自动提取的关键词
+        let autoRefreshInterval = null;
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            autoRefreshInterval = setInterval(async () => {
+                if (currentTree) {
+                    try {
+                        const response = await fetch(`/api/get_tree/${currentTree.tree_id}`);
+                        if (response.ok) {
+                            const treeData = await response.json();
+                            
+                            // 检查是否有关键词更新
+                            let hasKeywordUpdates = false;
+                            for (const nodeId in treeData.nodes) {
+                                const newNode = treeData.nodes[nodeId];
+                                const oldNode = currentTree.tree.nodes[nodeId];
+                                
+                                if (oldNode && 
+                                    (!oldNode.keywords || oldNode.keywords.length === 0) && 
+                                    newNode.keywords && newNode.keywords.length > 0) {
+                                    hasKeywordUpdates = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (hasKeywordUpdates) {
+                                currentTree.tree = treeData;
+                                renderTree(treeData);
+                                console.log('检测到关键词更新，已刷新显示');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('自动刷新失败:', error);
+                    }
+                }
+            }, 5000); // 每5秒检查一次
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // 删除生成树
+        async function deleteTree(treeId, treePrompt, event) {
+            // 阻止事件冒泡，避免触发加载树的点击事件
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            
+            // 确认删除
+            const confirmed = confirm(`确定要删除这个创作吗？\n\n"${treePrompt}"\n\n⚠️ 警告：此操作将永久删除：\n• 所有生成的图像文件\n• 所有分支和节点数据\n• 相关的任务记录\n\n此操作不可撤销！`);
+            
+            if (!confirmed) return;
+            
+            try {
+                showNotification('🗑️ 正在删除创作...', 'warning');
+                
+                const response = await fetch(`/api/delete_tree/${treeId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('✅ 创作已成功删除', 'success');
+                    
+                    // 如果当前显示的就是被删除的树，清空显示
+                    if (currentTree && currentTree.tree_id === treeId) {
+                        currentTree = null;
+                        document.getElementById('treeVisualization').innerHTML = `
+                            <div class="empty-state">
+                                <h3>🎨 准备开始你的创意之旅</h3>
+                                <p>输入一个简单的提示词，系统将为你生成一棵创意树</p>
+                                <p>每个节点都可以继续分支，探索不同的创意方向</p>
+                            </div>
+                        `;
+                        stopAutoRefresh();
+                    }
+                    
+                    // 刷新最近创作列表
+                    await loadRecentTrees();
+                } else {
+                    showNotification('❌ 删除失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('删除创作失败:', error);
+                showNotification('❌ 网络错误，删除失败', 'error');
+            }
+        }
+
+        // 编辑提示词功能
+        function editPrompt(nodeId) {
+            if (!currentTree || !currentTree.tree.nodes[nodeId]) return;
+            
+            const nodeData = currentTree.tree.nodes[nodeId];
+            const promptElement = document.querySelector(`#node-${nodeId} .node-prompt`);
+            
+            if (!promptElement || promptElement.classList.contains('node-prompt-editing')) return;
+            
+            // 保存原始内容
+            const originalPrompt = nodeData.prompt;
+            
+            // 创建编辑界面
+            promptElement.classList.add('node-prompt-editing');
+            promptElement.innerHTML = `
+                <textarea class="prompt-edit-input" id="prompt-input-${nodeId}">${originalPrompt}</textarea>
+                <div class="prompt-edit-actions">
+                    <button class="btn btn-secondary btn-small" onclick="cancelEditPrompt('${nodeId}', '${originalPrompt.replace(/'/g, "\\'")}')">❌ 取消</button>
+                    <button class="btn btn-primary btn-small" onclick="saveEditPrompt('${nodeId}')">✅ 保存</button>
+                </div>
+                <div class="prompt-edit-hint">💡 Ctrl+Enter保存，Esc取消 | 重新生成将使用新的提示词</div>
+            `;
+            
+            // 聚焦到输入框
+            const input = document.getElementById(`prompt-input-${nodeId}`);
+            input.focus();
+            input.select();
+            
+            // 添加键盘快捷键
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    saveEditPrompt(nodeId);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEditPrompt(nodeId, originalPrompt);
+                }
+            });
+            
+            // 阻止事件冒泡
+            if (event) event.stopPropagation();
+        }
+
+        function cancelEditPrompt(nodeId, originalPrompt) {
+            const promptElement = document.querySelector(`#node-${nodeId} .node-prompt`);
+            if (!promptElement) return;
+            
+            // 恢复原始显示
+            promptElement.classList.remove('node-prompt-editing');
+            promptElement.innerHTML = `
+                ${originalPrompt}
+                <div class="prompt-edit-hint">💡 点击编辑提示词</div>
+            `;
+        }
+
+        async function saveEditPrompt(nodeId) {
+            const input = document.getElementById(`prompt-input-${nodeId}`);
+            if (!input) return;
+            
+            const newPrompt = input.value.trim();
+            if (!newPrompt) {
+                showNotification('提示词不能为空', 'warning');
+                return;
+            }
+            
+            try {
+                showNotification('正在保存提示词...', 'success');
+                
+                const response = await fetch('/api/update_prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        tree_id: currentTree.tree_id,
+                        node_id: nodeId,
+                        new_prompt: newPrompt
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    // 更新本地数据
+                    currentTree.tree.nodes[nodeId].prompt = newPrompt;
+                    
+                    // 恢复显示
+                    const promptElement = document.querySelector(`#node-${nodeId} .node-prompt`);
+                    promptElement.classList.remove('node-prompt-editing');
+                    promptElement.innerHTML = `
+                        ${newPrompt}
+                        <div class="prompt-edit-hint">💡 点击编辑提示词</div>
+                    `;
+                    
+                    showNotification('✅ 提示词已保存', 'success');
+                } else {
+                    showNotification('❌ 保存失败: ' + (data.error || '未知错误'), 'error');
+                }
+            } catch (error) {
+                console.error('保存提示词失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        // 强制重置质量设置
+        async function forceResetQualitySettings() {
+            const confirmed = confirm('确定要强制重置所有质量设置为默认值吗？\n\n这将清除所有自定义设置！');
+            if (!confirmed) return;
+            
+            try {
+                showNotification('🔧 正在强制重置设置...', 'warning');
+                
+                const response = await fetch('/api/quality_settings/reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateQualitySettingsUI(data.settings);
+                    showNotification('✅ 质量设置已强制重置', 'success');
+                } else {
+                    showNotification('❌ 强制重置失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('强制重置失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+
+        // 调试质量设置
+        async function debugQualitySettings() {
+            try {
+                const response = await fetch('/api/quality_settings');
+                const data = await response.json();
+                
+                console.log('=== 质量设置调试信息 ===');
+                console.log('API响应:', data);
+                console.log('当前设置:', currentQualitySettings);
+                
+                // 检查所有相关元素
+                const elements = {
+                    qualityEnabled: document.getElementById('qualityEnabled'),
+                    qualityCheckEnabled: document.getElementById('qualityCheckEnabled'),
+                    accuracyCheckEnabled: document.getElementById('accuracyCheckEnabled'),
+                    scoreThreshold: document.getElementById('scoreThreshold'),
+                    accuracyThreshold: document.getElementById('accuracyThreshold')
+                };
+                
+                console.log('HTML元素状态:');
+                for (const [name, element] of Object.entries(elements)) {
+                    if (element) {
+                        console.log(`${name}:`, {
+                            exists: true,
+                            checked: element.checked,
+                            value: element.value,
+                            disabled: element.disabled
+                        });
+                    } else {
+                        console.log(`${name}: 元素不存在!`);
+                    }
+                }
+                
+                showNotification('🐛 调试信息已输出到控制台', 'success');
+            } catch (error) {
+                console.error('调试失败:', error);
+                showNotification('❌ 调试失败', 'error');
+            }
+        }
+
+        // 页面卸载时清理轮询
+        window.addEventListener('beforeunload', function() {
+            Object.values(pollingIntervals).forEach(interval => {
+                clearInterval(interval);
+            });
+            stopAutoRefresh();
+        });
+    </script>
+    
+    <!-- 国际化支持 -->
+    <script src="/static/js/i18n.js"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+{
+  "app": {
+    "title": "AI Image Tree Generator",
+    "subtitle": "AI-powered Creative Image Generation Tree System",
+    "description": "Infinite creative expansion through branching exploration"
+  },
+  "nav": {
+    "home": "Home",
+    "settings": "System Settings",
+    "history": "History",
+    "help": "Help"
+  },
+  "main": {
+    "input_placeholder": "Enter your creative description, e.g.: a beautiful garden",
+    "generate_button": "Generate Image Tree",
+    "generating": "Generating...",
+    "select_keyword": "Select keywords to continue exploring",
+    "regenerate": "Regenerate",
+    "download": "Download Image",
+    "expand": "Expand Branch"
+  },
+  "settings": {
+    "title": "System Settings",
+    "ai_provider": "AI Provider",
+    "provider_type": "Provider Type",
+    "server_address": "Server Address",
+    "api_key": "API Key",
+    "model": "Model",
+    "refresh_models": "Refresh Model List",
+    "comfyui_settings": "ComfyUI Settings",
+    "comfyui_url": "ComfyUI URL",
+    "sampling_steps": "Sampling Steps",
+    "cfg_scale": "CFG Guidance Scale",
+    "image_size": "Image Size",
+    "quality_control": "Quality Control",
+    "quality_check": "Enable Quality Check",
+    "accuracy_check": "Enable Accuracy Check",
+    "score_threshold": "Score Threshold",
+    "auto_retry": "Auto Retry",
+    "save": "Save Settings",
+    "cancel": "Cancel",
+    "test_connection": "Test Connection"
+  },
+  "providers": {
+    "ollama": "Ollama (Local)",
+    "openrouter": "OpenRouter (Cloud)",
+    "openai": "OpenAI (Official)",
+    "custom": "Custom API"
+  },
+  "messages": {
+    "success": "Operation successful",
+    "error": "Operation failed",
+    "loading": "Loading...",
+    "connecting": "Connecting...",
+    "generating_image": "Generating image...",
+    "optimizing_prompt": "Optimizing prompt...",
+    "evaluating_quality": "Evaluating quality...",
+    "settings_saved": "Settings saved",
+    "connection_success": "Connection successful",
+    "connection_failed": "Connection failed",
+    "model_loaded": "Model loaded successfully",
+    "generation_complete": "Generation complete",
+    "generation_failed": "Generation failed"
+  },
+  "errors": {
+    "network_error": "Network connection error",
+    "server_error": "Server error",
+    "invalid_input": "Invalid input",
+    "model_not_found": "Model not found",
+    "api_key_required": "API key required",
+    "generation_timeout": "Generation timeout",
+    "quality_too_low": "Image quality too low"
+  },
+  "help": {
+    "title": "User Guide",
+    "getting_started": "Getting Started",
+    "basic_usage": "Basic Usage",
+    "advanced_features": "Advanced Features",
+    "troubleshooting": "Troubleshooting"
+  },
+  "history": {
+    "title": "Generation History",
+    "prompt": "Prompt",
+    "timestamp": "Timestamp",
+    "score": "Score",
+    "actions": "Actions",
+    "view": "View",
+    "delete": "Delete",
+    "export": "Export"
+  }
+}

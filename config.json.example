@@ -1,0 +1,80 @@
+{
+  "ai_provider": {
+    "provider_type": "ollama",
+    "name": "Ollama",
+    "base_url": "http://localhost:11434",
+    "api_key": null,
+    "model": "ministral-3:latest",
+    "max_tokens": 4000,
+    "temperature": 0.7,
+    "timeout": 30,
+    "extra_params": {}
+  },
+  "comfyui": {
+    "url": "http://localhost:8000",
+    "sampling_steps": 9,
+    "cfg_scale": 1.0,
+    "image_size": "1536x1536"
+  },
+  "generation": {
+    "max_iterations": 5,
+    "quality_threshold": 7.0,
+    "output_dir": "generated_images",
+    "image_size": {
+      "width": 1536,
+      "height": 1536
+    }
+  },
+  "quality_control": {
+    "enabled": true,
+    "quality_check_enabled": true,
+    "accuracy_check_enabled": true,
+    "score_threshold": 7.0,
+    "accuracy_threshold": 7.0,
+    "auto_retry": true,
+    "max_retries": 2,
+    "strict_mode": false,
+    "defect_detection": true
+  },
+  "prompts": {
+    "enhancement_system": "你是一个专业的AI图像生成提示词优化专家。请将简单描述转换为详细、具体的英文提示词，包含视觉细节、艺术风格和技术参数。",
+    "evaluation_system": "你是图像质量评估专家。请从构图、色彩、细节、美感、匹配度五个维度评估图像，返回0-10分的评分和改进建议。"
+  },
+  "available_providers": {
+    "ollama": {
+      "name": "Ollama",
+      "provider_type": "ollama",
+      "base_url": "http://localhost:11434",
+      "api_key": null,
+      "models": ["ministral-3:latest", "llama3.2:latest", "qwen2.5:latest", "gemma3:12b"]
+    },
+    "openrouter": {
+      "name": "OpenRouter",
+      "provider_type": "openrouter",
+      "base_url": "https://openrouter.ai",
+      "api_key": "your-openrouter-api-key-here",
+      "models": [
+        "anthropic/claude-3.5-sonnet",
+        "openai/gpt-4o",
+        "openai/gpt-4o-mini",
+        "google/gemini-pro-1.5",
+        "meta-llama/llama-3.1-70b-instruct",
+        "mistralai/mistral-7b-instruct"
+      ]
+    },
+    "openai": {
+      "name": "OpenAI",
+      "provider_type": "openai",
+      "base_url": "https://api.openai.com",
+      "api_key": "your-openai-api-key-here",
+      "models": ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+    },
+    "custom": {
+      "name": "Custom OpenAI Compatible",
+      "provider_type": "openai_compatible",
+      "base_url": "http://localhost:8000",
+      "api_key": null,
+      "models": ["custom-model"]
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "app": {
+    "title": "AI图像树生成系统",
+    "subtitle": "基于AI的创意图像生成树系统",
+    "description": "通过分支探索实现无限创意扩展"
+  },
+  "nav": {
+    "home": "首页",
+    "settings": "系统设置",
+    "history": "历史记录",
+    "help": "帮助"
+  },
+  "main": {
+    "input_placeholder": "输入你的创意描述，例如：一个美丽的花园",
+    "generate_button": "生成图像树",
+    "generating": "正在生成中...",
+    "select_keyword": "选择关键词继续探索",
+    "regenerate": "重新生成",
+    "download": "下载图像",
+    "expand": "展开分支"
+  },
+  "settings": {
+    "title": "系统设置",
+    "ai_provider": "AI提供商",
+    "provider_type": "提供商类型",
+    "server_address": "服务器地址",
+    "api_key": "API密钥",
+    "model": "模型",
+    "refresh_models": "刷新模型列表",
+    "comfyui_settings": "ComfyUI设置",
+    "comfyui_url": "ComfyUI地址",
+    "sampling_steps": "采样步数",
+    "cfg_scale": "CFG引导强度",
+    "image_size": "图像尺寸",
+    "quality_control": "质量控制",
+    "quality_check": "启用质量检查",
+    "accuracy_check": "启用准确度检查",
+    "score_threshold": "评分阈值",
+    "auto_retry": "自动重试",
+    "save": "保存设置",
+    "cancel": "取消",
+    "test_connection": "测试连接"
+  },
+  "providers": {
+    "ollama": "Ollama (本地)",
+    "openrouter": "OpenRouter (云端)",
+    "openai": "OpenAI (官方)",
+    "custom": "自定义API"
+  },
+  "messages": {
+    "success": "操作成功",
+    "error": "操作失败",
+    "loading": "加载中...",
+    "connecting": "连接中...",
+    "generating_image": "正在生成图像...",
+    "optimizing_prompt": "正在优化提示词...",
+    "evaluating_quality": "正在评估质量...",
+    "settings_saved": "设置已保存",
+    "connection_success": "连接成功",
+    "connection_failed": "连接失败",
+    "model_loaded": "模型加载成功",
+    "generation_complete": "生成完成",
+    "generation_failed": "生成失败"
+  },
+  "errors": {
+    "network_error": "网络连接错误",
+    "server_error": "服务器错误",
+    "invalid_input": "输入无效",
+    "model_not_found": "模型未找到",
+    "api_key_required": "需要API密钥",
+    "generation_timeout": "生成超时",
+    "quality_too_low": "图像质量过低"
+  },
+  "help": {
+    "title": "使用帮助",
+    "getting_started": "快速开始",
+    "basic_usage": "基本使用",
+    "advanced_features": "高级功能",
+    "troubleshooting": "故障排除"
+  },
+  "history": {
+    "title": "生成历史",
+    "prompt": "提示词",
+    "timestamp": "时间",
+    "score": "评分",
+    "actions": "操作",
+    "view": "查看",
+    "delete": "删除",
+    "export": "导出"
+  }
+}
