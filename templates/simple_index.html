@@ -890,6 +890,36 @@
             max-width: 100%;
         }
         
+        /* 自定义尺寸面板样式 */
+        .preset-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #ffffff;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .preset-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .preset-btn:active {
+            background: #e5e7eb;
+        }
+        
+        #customSizePanel input[type="number"] {
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        
+        #customSizeInfo {
+            font-family: 'Courier New', monospace;
+        }
+        
         /* AI 模型选择框特殊样式 */
         #aiModel {
             min-width: 450px !important;
@@ -1055,18 +1085,47 @@
                         </div>
                         <div class="setting-description">提示词引导强度，影响生成图像与提示词的匹配度</div>
                         
-                        <label class="setting-label" style="margin-top: 12px;">图像尺寸</label>
+                        <label class="setting-label" style="margin-top: 12px;" data-i18n="settings.image_size">图像尺寸</label>
                         <div class="setting-input-group">
-                            <select id="imageSize" style="flex: 1; min-width: 180px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
-                                    onchange="updateSystemSetting('image_size', this.value)">
-                                <option value="1024x1024">1024×1024 (标准)</option>
-                                <option value="1536x1536">1536×1536 (高清)</option>
+                            <select id="imageSize" style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;"
+                                    onchange="handleImageSizeChange(this.value)">
+                                <option value="512x512">512×512 (快速)</option>
                                 <option value="768x1024">768×1024 (竖屏)</option>
                                 <option value="1024x768">1024×768 (横屏)</option>
-                                <option value="512x512">512×512 (快速)</option>
+                                <option value="1024x1024">1024×1024 (标准)</option>
+                                <option value="1072x1920">1072×1920 (手机竖屏)</option>
+                                <option value="1536x1536">1536×1536 (高清)</option>
+                                <option value="1920x1072">1920×1072 (宽屏)</option>
+                                <option value="custom">自定义尺寸...</option>
                             </select>
                         </div>
-                        <div class="setting-description">生成图像的分辨率大小</div>
+                        
+                        <!-- 自定义尺寸输入 -->
+                        <div id="customSizePanel" style="display: none; margin-top: 10px; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <label style="min-width: 40px; font-weight: 500;">宽度:</label>
+                                <input type="number" id="customWidth" min="256" max="4096" step="64" value="1536" 
+                                       style="width: 100px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;"
+                                       onchange="updateCustomSize()">
+                                <span style="color: #6b7280;">×</span>
+                                <label style="min-width: 40px; font-weight: 500;">高度:</label>
+                                <input type="number" id="customHeight" min="256" max="4096" step="64" value="1536" 
+                                       style="width: 100px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px;"
+                                       onchange="updateCustomSize()">
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button type="button" onclick="setCustomSize(1024, 1024)" class="preset-btn">1024×1024</button>
+                                <button type="button" onclick="setCustomSize(1280, 720)" class="preset-btn">1280×720</button>
+                                <button type="button" onclick="setCustomSize(1920, 1080)" class="preset-btn">1920×1080</button>
+                                <button type="button" onclick="setCustomSize(2048, 2048)" class="preset-btn">2048×2048</button>
+                                <button type="button" onclick="swapCustomSize()" class="preset-btn">🔄 交换</button>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+                                <span id="customSizeInfo">分辨率: 1536×1536 | 宽高比: 1:1 | 像素: 2.36M</span>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-description">生成图像的分辨率大小，支持多种预设和自定义尺寸</div>
                     </div>
                     
                     <!-- 质量控制设置 -->
@@ -2097,10 +2156,7 @@
                 if (data.success) {
                     currentSystemSettings = data.settings;
                     
-                    // 先加载 AI 模型列表
-                    await loadAIModels();
-                    
-                    // 然后更新 UI
+                    // 直接更新 UI，updateSystemSettingsUI 会调用 loadAIModels 并保持模型选择
                     updateSystemSettingsUI(data.settings);
                 } else {
                     showNotification('❌ 加载设置失败', 'error');
@@ -2253,6 +2309,11 @@
         async function loadAIModels() {
             try {
                 const providerType = document.getElementById('aiProviderType').value;
+                const modelSelect = document.getElementById('aiModel');
+                const currentSelectedModel = modelSelect.value; // 保存当前选中的模型
+                
+                console.log(`加载${providerType}模型列表，当前选中模型:`, currentSelectedModel);
+                
                 let response;
                 
                 if (providerType === 'ollama') {
@@ -2264,7 +2325,6 @@
                 }
                 
                 const data = await response.json();
-                const modelSelect = document.getElementById('aiModel');
                 
                 if (data.success && data.models) {
                     modelSelect.innerHTML = '';
@@ -2276,12 +2336,36 @@
                     modelSelect.appendChild(defaultOption);
                     
                     // 添加模型选项
+                    let modelFound = false;
                     data.models.forEach(model => {
                         const option = document.createElement('option');
                         option.value = model;
                         option.textContent = model;
                         modelSelect.appendChild(option);
+                        
+                        // 检查是否是当前选中的模型
+                        if (model === currentSelectedModel) {
+                            modelFound = true;
+                        }
                     });
+                    
+                    // 恢复之前选中的模型（如果存在）
+                    if (modelFound && currentSelectedModel) {
+                        modelSelect.value = currentSelectedModel;
+                        console.log(`✅ 恢复选中模型: ${currentSelectedModel}`);
+                    } else if (currentSelectedModel && !modelFound) {
+                        // 如果之前选中的模型不在新列表中，添加它并标记为不可用
+                        const unavailableOption = document.createElement('option');
+                        unavailableOption.value = currentSelectedModel;
+                        unavailableOption.textContent = `${currentSelectedModel} (不可用)`;
+                        unavailableOption.style.color = '#f56565';
+                        unavailableOption.style.fontStyle = 'italic';
+                        modelSelect.appendChild(unavailableOption);
+                        modelSelect.value = currentSelectedModel;
+                        console.log(`⚠️ 模型不在列表中，标记为不可用: ${currentSelectedModel}`);
+                    } else {
+                        console.log('没有需要恢复的模型选择');
+                    }
                     
                     // 更新来源信息
                     const sourceSpan = document.getElementById('modelSource');
@@ -2545,27 +2629,42 @@
             // AI 提供商设置
             if (settings.ai_provider) {
                 const ai = settings.ai_provider;
+                console.log('正在设置AI提供商配置:', ai);
+                
                 document.getElementById('aiProviderType').value = ai.provider_type || 'ollama';
                 document.getElementById('aiBaseUrl').value = ai.base_url || '';
                 document.getElementById('aiApiKey').value = ai.api_key || '';
+                // 先设置模型值，loadAIModels会保持这个值
                 document.getElementById('aiModel').value = ai.model || '';
+                console.log('设置模型值为:', ai.model);
+                
                 document.getElementById('aiMaxTokens').value = ai.max_tokens || 4000;
                 document.getElementById('aiTemperature').value = ai.temperature || 0.7;
                 
                 // 应用提供商特定的界面设置
                 updateProviderDefaults(ai.provider_type || 'ollama');
                 
-                // 加载对应提供商的模型列表
-                loadAIModels();
+                // 加载对应提供商的模型列表（会保持当前选中的模型）
+                console.log('开始加载模型列表...');
+                loadAIModels().then(() => {
+                    console.log('模型列表加载完成，当前选中:', document.getElementById('aiModel').value);
+                });
             }
             
             // 向后兼容：如果还有旧的ollama配置，也更新AI提供商设置
             if (settings.ollama && !settings.ai_provider) {
+                console.log('使用向后兼容的Ollama配置:', settings.ollama);
+                
                 document.getElementById('aiProviderType').value = 'ollama';
                 document.getElementById('aiBaseUrl').value = settings.ollama.url || '';
+                // 先设置模型值，loadAIModels会保持这个值
                 document.getElementById('aiModel').value = settings.ollama.model || '';
+                console.log('设置Ollama模型值为:', settings.ollama.model);
+                
                 updateProviderDefaults('ollama');
-                loadAIModels();
+                loadAIModels().then(() => {
+                    console.log('Ollama模型列表加载完成，当前选中:', document.getElementById('aiModel').value);
+                });
             }
             
             // ComfyUI 设置
@@ -2573,7 +2672,32 @@
                 document.getElementById('comfyuiUrl').value = settings.comfyui.url || '';
                 document.getElementById('samplingSteps').value = settings.comfyui.sampling_steps || 9;
                 document.getElementById('cfgScale').value = settings.comfyui.cfg_scale || 1.0;
-                document.getElementById('imageSize').value = settings.comfyui.image_size || '1536x1536';
+                
+                // 处理图像尺寸设置
+                const imageSize = settings.comfyui.image_size || '1536x1536';
+                const presetSizes = ['512x512', '768x1024', '1024x768', '1024x1024', '1072x1920', '1536x1536', '1920x1072'];
+                
+                if (presetSizes.includes(imageSize)) {
+                    // 预设尺寸
+                    document.getElementById('imageSize').value = imageSize;
+                    document.getElementById('customSizePanel').style.display = 'none';
+                } else {
+                    // 自定义尺寸
+                    document.getElementById('imageSize').value = 'custom';
+                    document.getElementById('customSizePanel').style.display = 'block';
+                    
+                    try {
+                        const [width, height] = imageSize.split('x').map(Number);
+                        document.getElementById('customWidth').value = width;
+                        document.getElementById('customHeight').value = height;
+                        updateCustomSizeInfo();
+                    } catch (e) {
+                        console.error('解析自定义尺寸失败:', imageSize);
+                        document.getElementById('customWidth').value = 1536;
+                        document.getElementById('customHeight').value = 1536;
+                        updateCustomSizeInfo();
+                    }
+                }
                 
                 // 更新显示值
                 updateThresholdDisplay('steps', settings.comfyui.sampling_steps || 9);
@@ -2630,6 +2754,64 @@
                 console.error('更新设置失败:', error);
                 showNotification('❌ 网络错误', 'error');
             }
+        }
+
+        // 自定义尺寸处理函数
+        function handleImageSizeChange(value) {
+            const customPanel = document.getElementById('customSizePanel');
+            
+            if (value === 'custom') {
+                customPanel.style.display = 'block';
+                updateCustomSizeInfo();
+            } else {
+                customPanel.style.display = 'none';
+                updateSystemSetting('image_size', value);
+            }
+        }
+
+        function updateCustomSize() {
+            const width = parseInt(document.getElementById('customWidth').value);
+            const height = parseInt(document.getElementById('customHeight').value);
+            
+            if (width && height && width >= 256 && height >= 256 && width <= 4096 && height <= 4096) {
+                const customSize = `${width}x${height}`;
+                updateSystemSetting('image_size', customSize);
+                updateCustomSizeInfo();
+            }
+        }
+
+        function setCustomSize(width, height) {
+            document.getElementById('customWidth').value = width;
+            document.getElementById('customHeight').value = height;
+            updateCustomSize();
+        }
+
+        function swapCustomSize() {
+            const widthInput = document.getElementById('customWidth');
+            const heightInput = document.getElementById('customHeight');
+            const temp = widthInput.value;
+            widthInput.value = heightInput.value;
+            heightInput.value = temp;
+            updateCustomSize();
+        }
+
+        function updateCustomSizeInfo() {
+            const width = parseInt(document.getElementById('customWidth').value) || 1536;
+            const height = parseInt(document.getElementById('customHeight').value) || 1536;
+            
+            // 计算宽高比
+            const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+            const divisor = gcd(width, height);
+            const ratioW = width / divisor;
+            const ratioH = height / divisor;
+            
+            // 计算像素数
+            const pixels = width * height;
+            const pixelsM = (pixels / 1000000).toFixed(2);
+            
+            // 更新信息显示
+            const info = `分辨率: ${width}×${height} | 宽高比: ${ratioW}:${ratioH} | 像素: ${pixelsM}M`;
+            document.getElementById('customSizeInfo').textContent = info;
         }
 
         async function saveSystemSettings() {

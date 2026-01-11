@@ -1273,8 +1273,22 @@ def update_system_settings():
         
         if 'image_size' in data:
             size = data['image_size']
-            if size in ['512x512', '768x1024', '1024x768', '1024x1024', '1536x1536']:
+            # 支持预设尺寸和自定义尺寸
+            preset_sizes = ['512x512', '768x1024', '1024x768', '1024x1024', '1072x1920', '1536x1536', '1920x1072']
+            
+            # 检查是否为预设尺寸
+            if size in preset_sizes:
                 current_settings['comfyui']['image_size'] = size
+            else:
+                # 验证自定义尺寸格式
+                try:
+                    width, height = map(int, size.split('x'))
+                    if 256 <= width <= 4096 and 256 <= height <= 4096:
+                        current_settings['comfyui']['image_size'] = size
+                    else:
+                        logger.warning(f"自定义尺寸超出范围: {size}")
+                except (ValueError, AttributeError):
+                    logger.warning(f"无效的图像尺寸格式: {size}")
         
         # 更新质量控制设置
         quality_control = current_settings.get('quality_control', {})

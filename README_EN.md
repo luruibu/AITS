@@ -177,10 +177,23 @@ This project integrates the latest Z-image Turbo model, providing commercial-gra
 
 #### Z-image Turbo Model Features
 - **🚀 Ultra-fast Generation**: Uses turbo optimization algorithm, generates high-quality images with just 9 sampling steps
-- **💎 Commercial Quality**: Supports 1536x1536 high-resolution output, meeting commercial printing requirements
+- **💎 Commercial Quality**: Supports multiple resolution outputs, including 1920×1072 widescreen, 1072×1920 mobile portrait, etc.
 - **🎯 Precise Understanding**: Based on advanced CLIP text encoder, accurately understands complex prompts
 - **⚡ Memory Optimized**: bf16 precision optimization reduces VRAM usage and improves generation speed
 - **🔧 Flexible Configuration**: Supports custom sampling steps, CFG guidance scale, image dimensions, and other parameters
+
+#### Supported Resolutions
+- **Preset Sizes**:
+  - 512×512 (Quick Preview)
+  - 768×1024 (Portrait Standard)
+  - 1024×768 (Landscape Standard)
+  - 1024×1024 (Square Standard)
+  - 1072×1920 (Mobile Portrait)
+  - 1536×1536 (High-res Square)
+  - 1920×1072 (Widescreen Display)
+- **Custom Sizes**: Supports any size within 256×256 to 4096×4096 range
+- **Smart Presets**: Provides quick setting buttons for common sizes
+- **Aspect Ratio Calculation**: Automatically displays aspect ratio and pixel information
 
 Ensure ComfyUI is running and accessible:
 - Default address: `http://localhost:8000`
