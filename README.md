@@ -59,7 +59,7 @@
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/your-username/ai-image-tree.git
+git clone https://github.com/luruibu/ai-image-tree.git
 cd ai-image-tree
 ```
 
@@ -91,7 +91,7 @@ python start.py
 
 1. **克隆项目**
 ```bash
-git clone https://github.com/your-username/ai-image-tree.git
+git clone https://github.com/luruibu/ai-image-tree.git
 cd ai-image-tree
 ```
 
@@ -493,8 +493,8 @@ ollama pull gemma3:12b
 
 如果你遇到问题或有建议，请：
 
-- 提交 [Issue](https://github.com/your-username/ai-image-tree/issues)
-- 参与 [Discussions](https://github.com/your-username/ai-image-tree/discussions)
+- 提交 [Issue](https://github.com/luruibu/ai-image-tree/issues)
+- 参与 [Discussions](https://github.com/luruibu/ai-image-tree/discussions)
 
 ---
 

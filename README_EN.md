@@ -59,7 +59,7 @@
 
 1. **Clone the Project**
 ```bash
-git clone https://github.com/your-username/ai-image-tree.git
+git clone https://github.com/luruibu/ai-image-tree.git
 cd ai-image-tree
 ```
 
@@ -91,7 +91,7 @@ python start.py
 
 1. **Clone the Project**
 ```bash
-git clone https://github.com/your-username/ai-image-tree.git
+git clone https://github.com/luruibu/ai-image-tree.git
 cd ai-image-tree
 ```
 
@@ -517,8 +517,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter issues or have suggestions:
 
-- Submit an [Issue](https://github.com/your-username/ai-image-tree/issues)
-- Join [Discussions](https://github.com/your-username/ai-image-tree/discussions)
+- Submit an [Issue](https://github.com/luruibu/ai-image-tree/issues)
+- Join [Discussions](https://github.com/luruibu/ai-image-tree/discussions)
 
 ---
 
