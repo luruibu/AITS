@@ -1,29 +1,29 @@
 @echo off
-echo 🚀 启动 AI Image Tree System...
+echo   ���� AI Image Tree System...
 echo.
 
-REM 检查Python是否安装
+REM ���Python�Ƿ�װ
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Python 未安装或未添加到PATH
-    echo 💡 请先安装 Python 3.8+ 并添加到系统PATH
+    echo   Python δ��װ��δ���ӵ�PATH
+    echo   ���Ȱ�װ Python 3.8+ �����ӵ�ϵͳPATH
     pause
     exit /b 1
 )
 
-REM 检查配置文件
+REM ��������ļ�
 if not exist "config.json" (
-    echo ⚠️ 配置文件不存在，运行安装脚本...
+    echo   �����ļ������ڣ����а�װ�ű�...
     python setup.py
     if errorlevel 1 (
-        echo ❌ 安装失败
+        echo   ��װʧ��
         pause
         exit /b 1
     )
 )
 
-REM 启动应用
-echo ✅ 启动应用...
+REM ����Ӧ��
+echo   ����Ӧ��...
 python app.py
 
 pause
