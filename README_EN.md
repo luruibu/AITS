@@ -7,6 +7,31 @@
 
 🌳 An AI-powered creative image generation tree system that supports multiple AI providers and enables infinite creative expansion through branching exploration.
 
+## 📸 Program Interface Preview
+
+<details>
+<summary>🖼️ Click to view full interface screenshot (3576x17030)</summary>
+
+![AI Image Tree System Interface](static/img/18-1-2026_012_localhost.jpeg)
+
+*Complete AI Image Tree System interface showcase - featuring tree-based creative generation, keyword extraction, branch exploration, image zoom, and all core functionalities*
+
+> **Note**: This screenshot is quite large (3576 x 17030 pixels), showing the complete program interface. We recommend opening it in a new tab for better viewing, or running the program directly to experience the full functionality.
+
+</details>
+
+### 🎯 Core Features Showcase
+
+- **🌳 Tree-based Creative Generation**: Generate multi-layered branching creativity from a single prompt
+- **🔍 Smart Keyword Extraction**: AI automatically analyzes and extracts core creative elements
+- **🖼️ High-quality Image Generation**: Commercial-grade image output based on Z-image Turbo model
+- **🔄 Interactive Exploration**: Rich interactions including node expansion, image zoom, fullscreen view
+- **⚙️ Flexible Configuration**: Multi-AI provider support with adjustable parameters
+
+> 📖 **Detailed Interface Documentation**: 
+> - [Interface Features Guide](INTERFACE_SHOWCASE.md) - Complete functional area descriptions and design features
+> - [Interface Preview Guide](INTERFACE_PREVIEW.md) - Key functional areas and interaction workflows
+
 ## ✨ Features
 
 ### 🎨 Creative Inspiration & Commercial Generation
