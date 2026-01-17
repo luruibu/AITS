@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 AI Image Tree System 启动脚本
 简化的启动入口
@@ -9,6 +10,47 @@ import sys
 import json
 from pathlib import Path
 
+# 强制设置UTF-8编码（Windows兼容性）
+if sys.platform.startswith('win'):
+    import locale
+    import codecs
+    
+    try:
+        # 设置控制台代码页为UTF-8
+        os.system('chcp 65001 >nul 2>&1')
+        
+        # 设置环境变量
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
+        os.environ['PYTHONUTF8'] = '1'
+        
+        # 重新配置标准输入输出流
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+            if hasattr(sys.stdin, 'reconfigure'):
+                sys.stdin.reconfigure(encoding='utf-8', errors='replace')
+        else:
+            # 对于较老的Python版本，使用包装器
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach(), errors='replace')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach(), errors='replace')
+        
+        # 设置默认编码
+        if hasattr(sys, 'setdefaultencoding'):
+            sys.setdefaultencoding('utf-8')
+            
+        # 设置locale
+        try:
+            locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+        except locale.Error:
+            try:
+                locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+            except locale.Error:
+                pass  # 忽略locale设置失败
+                
+    except Exception as e:
+        print(f"Warning: Failed to set UTF-8 encoding: {e}")
+        pass
+
 def check_config():
     """检查配置文件"""
     config_file = Path("config.json")
@@ -18,7 +60,8 @@ def check_config():
         return False
     
     try:
-        with open(config_file, 'r', encoding='utf-8') as f:
+        # 强制使用UTF-8编码读取配置文件
+        with open(config_file, 'r', encoding='utf-8', errors='replace') as f:
             config = json.load(f)
         
         # 检查基本配置
@@ -66,14 +109,35 @@ def main():
     # 启动应用
     try:
         print("✅ 检查通过，启动应用...")
-        from app import app
         
-        # 导入主应用并启动
-        if __name__ == "__main__":
-            exec(open("app.py").read())
+        # 更安全的方式启动应用 - 直接导入而不是使用importlib
+        try:
+            # 直接导入app模块
+            import app
+            # 如果app模块有main函数，调用它；否则直接运行Flask应用
+            if hasattr(app, 'main'):
+                app.main()
+            elif hasattr(app, 'app'):
+                # 启动Flask应用
+                app.app.run(host='localhost', port=8080, debug=False, threaded=True)
+            else:
+                print("❌ 无法找到应用入口点")
+                sys.exit(1)
+                
+        except ImportError as e:
+            print(f"❌ 导入应用模块失败: {e}")
+            print("💡 请检查app.py文件是否存在且语法正确")
+            sys.exit(1)
+            
     except Exception as e:
         print(f"❌ 启动失败: {e}")
         print("💡 请检查配置和依赖")
+        
+        # 输出更详细的错误信息用于调试
+        import traceback
+        print("\n详细错误信息:")
+        traceback.print_exc()
+        
         sys.exit(1)
 
 if __name__ == "__main__":

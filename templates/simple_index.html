@@ -127,6 +127,36 @@
             min-height: 400px;
         }
 
+        .tree-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tree-info {
+            flex: 1;
+        }
+
+        .tree-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tree-actions {
+            display: flex;
+            gap: 8px;
+        }
+
         .node-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -171,11 +201,74 @@
             margin-bottom: 15px;
             cursor: pointer;
             transition: transform 0.2s ease;
+            position: relative; /* 为遮罩定位做准备 */
         }
 
         .node-image:hover {
             transform: scale(1.02);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 重新生成遮罩样式 */
+        .regenerating-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            backdrop-filter: blur(3px);
+            animation: regenerating-fade-in 0.3s ease-in-out;
+        }
+
+        .regenerating-content {
+            text-align: center;
+            color: white;
+            padding: 20px;
+        }
+
+        .regenerating-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            animation: regenerating-spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        .regenerating-text {
+            font-size: 14px;
+            font-weight: 600;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            line-height: 1.4;
+        }
+
+        .regenerating-text small {
+            font-size: 12px;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        @keyframes regenerating-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes regenerating-fade-in {
+            0% { 
+                opacity: 0; 
+                transform: scale(0.9);
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
         }
 
         .node-prompt {
@@ -228,6 +321,23 @@
         }
 
         .node-keywords {
+            margin-top: 8px;
+        }
+
+        .keywords-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .keywords-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .keywords-list {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
@@ -440,6 +550,16 @@
             object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            transition: transform 0.1s ease-out;
+            cursor: grab;
+        }
+        
+        .fullscreen-image.zoomed {
+            cursor: move;
+        }
+        
+        .fullscreen-image:active {
+            cursor: grabbing;
         }
 
         .fullscreen-close {
@@ -536,6 +656,26 @@
         .info-toggle:hover {
             background: rgba(0, 0, 0, 0.8);
             transform: scale(1.1);
+        }
+        
+        /* 缩放提示 */
+        .zoom-indicator {
+            position: absolute;
+            top: 20px;
+            right: 80px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 2002;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .zoom-indicator.show {
+            opacity: 1;
         }
 
         .version-badge {
@@ -1189,6 +1329,41 @@
                         </label>
                         <div class="setting-description">检测常见的AI生成缺陷</div>
                     </div>
+                    
+                    <!-- 数据库管理 -->
+                    <div class="setting-item">
+                        <h5 style="color: #4a5568; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">💾 数据库管理</h5>
+                        
+                        <!-- 数据库统计信息 -->
+                        <div id="dbStats" style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+                                <div><strong>数据库大小:</strong> <span id="dbSize">加载中...</span></div>
+                                <div><strong>图像数据:</strong> <span id="dbImageSize">加载中...</span></div>
+                                <div><strong>创作树数量:</strong> <span id="dbTreesCount">加载中...</span></div>
+                                <div><strong>节点数量:</strong> <span id="dbNodesCount">加载中...</span></div>
+                            </div>
+                            <button class="btn btn-secondary btn-small" onclick="refreshDatabaseStats()" style="margin-top: 10px;">🔄 刷新统计</button>
+                        </div>
+                        
+                        <label class="setting-label">初始化数据库</label>
+                        <div style="background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <p style="color: #c53030; font-size: 13px; margin-bottom: 10px;">
+                                ⚠️ <strong>警告</strong>：此操作将清空所有创作树、节点和图像数据，并收缩数据库文件。
+                            </p>
+                            <p style="color: #742a2a; font-size: 12px; margin-bottom: 10px;">
+                                • 所有创作历史将被永久删除<br>
+                                • 用户设置将被保留<br>
+                                • 操作不可撤销
+                            </p>
+                            <button class="btn btn-warning btn-small" onclick="resetDatabase()" style="background: #e53e3e; border-color: #c53030;">
+                                🗑️ 初始化数据库
+                            </button>
+                        </div>
+                        
+                        <div class="setting-description" style="color: #718096; font-size: 12px;">
+                            💡 提示：初始化后数据库将恢复到最小状态，通常只有几KB大小。
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="settings-actions">
@@ -1201,6 +1376,19 @@
         </div>
 
         <div class="tree-container">
+            <div id="treeToolbar" class="tree-toolbar" style="display: none;">
+                <div class="tree-info">
+                    <span id="treeTitle" class="tree-title"></span>
+                </div>
+                <div class="tree-actions">
+                    <button class="btn btn-secondary btn-small" onclick="batchExtractKeywords()" title="为所有缺少关键词的节点重新生成">
+                        🔄 批量生成关键词
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="showTreeStats()" title="查看树的统计信息">
+                        📊 统计信息
+                    </button>
+                </div>
+            </div>
             <div id="treeVisualization">
                 <div class="empty-state">
                     <h3>🎨 准备开始你的创意之旅</h3>
@@ -1220,6 +1408,9 @@
     <div id="fullscreenOverlay" class="fullscreen-overlay" onclick="closeFullscreen(event)">
         <button class="view-toggle" onclick="toggleView(event)">切换视图</button>
         <span class="fullscreen-close" onclick="closeFullscreen(event)">&times;</span>
+        
+        <!-- 缩放提示 -->
+        <div id="zoomIndicator" class="zoom-indicator">🔍 100%</div>
         
         <!-- 单图预览 -->
         <div id="singleView" class="fullscreen-content">
@@ -1293,10 +1484,7 @@
                     renderTree(data.tree);
                     showNotification('创意树创建成功！', 'success');
                     
-                    // 开始自动刷新以显示关键词更新
-                    startAutoRefresh();
-                    
-                    // 开始轮询关键词提取状态
+                    // 开始轮询关键词提取状态（会自动启动刷新）
                     if (data.keywords_task_id) {
                         pollTask(data.keywords_task_id, (result) => {
                             updateNodeKeywords(data.root_id, result);
@@ -1317,6 +1505,9 @@
 
         // 轮询任务状态
         function pollTask(taskId, onComplete, onFailed) {
+            // 增加活动任务计数
+            incrementActiveTasks();
+            
             const interval = setInterval(async () => {
                 try {
                     const response = await fetch(`/api/check_task/${taskId}`);
@@ -1325,10 +1516,12 @@
                     if (task.status === 'completed') {
                         clearInterval(interval);
                         delete pollingIntervals[taskId];
+                        decrementActiveTasks(); // 任务完成，减少计数
                         if (onComplete) onComplete(task.result);
                     } else if (task.status === 'failed') {
                         clearInterval(interval);
                         delete pollingIntervals[taskId];
+                        decrementActiveTasks(); // 任务失败，减少计数
                         if (onFailed) onFailed(task.error);
                         else showNotification('任务失败: ' + (task.error || '未知错误'), 'error');
                     }
@@ -1346,6 +1539,15 @@
         function renderTree(treeData) {
             const container = document.getElementById('treeVisualization');
             container.innerHTML = '';
+
+            // 显示工具栏
+            const toolbar = document.getElementById('treeToolbar');
+            const treeTitle = document.getElementById('treeTitle');
+            if (toolbar && treeTitle) {
+                toolbar.style.display = 'flex';
+                const rootNode = treeData.nodes[treeData.root_id];
+                treeTitle.textContent = `🌳 ${rootNode?.prompt || '未知提示词'}`;
+            }
 
             // 创建根节点
             const rootNode = treeData.nodes[treeData.root_id];
@@ -1442,9 +1644,15 @@
             let keywordsHtml = '';
             if (nodeData.keywords && nodeData.keywords.length > 0) {
                 keywordsHtml = '<div class="node-keywords">' +
+                    '<div class="keywords-header">' +
+                        '<span class="keywords-title">🏷️ 关键词</span>' +
+                        `<button class="btn btn-small btn-secondary" onclick="forceExtractKeywords('${nodeData.node_id}')" title="重新生成关键词">🔄</button>` +
+                    '</div>' +
+                    '<div class="keywords-list">' +
                     nodeData.keywords.map(kw => 
                         `<span class="keyword-tag" onclick="toggleKeyword('${nodeData.node_id}', '${kw.text}')">${kw.text}</span>`
                     ).join('') +
+                    '</div>' +
                     '</div>';
             }
 
@@ -1816,8 +2024,12 @@
         async function forceExtractKeywords(nodeId) {
             if (!currentTree) return;
             
+            // 添加确认对话框
+            const confirmed = confirm('确定要重新生成关键词吗？\n\n这将使用AI重新分析提示词，生成全新的关键词。');
+            if (!confirmed) return;
+            
             try {
-                showNotification('正在提取关键词...', 'success');
+                showNotification('🤖 正在重新生成关键词...', 'success');
                 
                 const response = await fetch(`/api/force_extract_keywords/${currentTree.tree_id}/${nodeId}`, {
                     method: 'POST'
@@ -1830,32 +2042,148 @@
                     if (currentTree.tree.nodes[nodeId]) {
                         currentTree.tree.nodes[nodeId].keywords = data.keywords;
                         updateNodeActions(nodeId);
-                        showNotification(`✅ 关键词提取完成！(${data.count}个)`, 'success');
+                        showNotification(`✅ 关键词重新生成完成！(${data.count}个)\n${data.message || ''}`, 'success');
+                        
+                        // 重新渲染节点以显示新的关键词
+                        renderTree(currentTree.tree);
                     }
                 } else {
-                    showNotification('❌ 关键词提取失败: ' + (data.error || '未知错误'), 'error');
+                    showNotification('❌ 关键词重新生成失败: ' + (data.error || '未知错误'), 'error');
                 }
             } catch (error) {
                 console.error('强制提取关键词失败:', error);
-                showNotification('❌ 网络错误', 'error');
+                showNotification('❌ 网络错误，请检查连接', 'error');
             }
         }
 
-        // 重新生成图像
+        // 批量生成关键词
+        async function batchExtractKeywords() {
+            if (!currentTree) return;
+            
+            const confirmed = confirm('确定要为所有缺少关键词的节点重新生成关键词吗？\n\n这将使用AI分析所有相关节点的提示词。');
+            if (!confirmed) return;
+            
+            try {
+                showNotification('🤖 正在批量生成关键词...', 'success');
+                
+                const response = await fetch(`/api/auto_extract_keywords/${currentTree.tree_id}`);
+                const data = await response.json();
+                
+                console.log('批量生成关键词API响应:', data); // 调试信息
+                
+                if (response.ok && data.success) {
+                    showNotification(`✅ 批量关键词生成任务已启动！\n将为 ${data.nodes_to_extract} 个节点生成关键词`, 'success');
+                    
+                    // 检查task_id是否存在
+                    const taskId = data.task_id;
+                    if (!taskId) {
+                        console.error('API返回的数据中缺少task_id:', data);
+                        showNotification('❌ 任务ID缺失，无法监控进度', 'error');
+                        return;
+                    }
+                    
+                    console.log('开始监控任务:', taskId); // 调试信息
+                    
+                    // 增加活动任务计数
+                    incrementActiveTasks();
+                    
+                    // 定期检查任务状态
+                    const checkInterval = setInterval(async () => {
+                        try {
+                            console.log(`检查任务状态: ${taskId}`); // 调试信息
+                            const taskResponse = await fetch(`/api/check_task/${taskId}`);
+                            const taskData = await taskResponse.json();
+                            
+                            console.log('任务状态响应:', taskData); // 调试信息
+                            
+                            if (taskData.status === 'completed') {
+                                clearInterval(checkInterval);
+                                decrementActiveTasks(); // 任务完成，减少计数
+                                showNotification(`✅ 批量关键词生成完成！\n成功处理 ${taskData.result?.extracted_count || 0} 个节点`, 'success');
+                                
+                                // 重新加载树数据
+                                loadTree(currentTree.tree_id);
+                            } else if (taskData.status === 'failed') {
+                                clearInterval(checkInterval);
+                                decrementActiveTasks(); // 任务失败，减少计数
+                                showNotification('❌ 批量关键词生成失败: ' + (taskData.error || '未知错误'), 'error');
+                            } else if (taskData.status === 'not_found') {
+                                clearInterval(checkInterval);
+                                decrementActiveTasks(); // 任务不存在，减少计数
+                                showNotification('❌ 任务不存在或已过期', 'error');
+                            }
+                            // 如果状态是 'running' 或 'pending'，继续等待
+                        } catch (error) {
+                            console.error('检查任务状态失败:', error);
+                            // 不要因为单次检查失败就停止整个监控
+                        }
+                    }, 3000); // 每3秒检查一次
+                    
+                    // 设置超时，避免无限等待
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        decrementActiveTasks(); // 超时，减少计数
+                        showNotification('⏰ 任务监控超时，请手动刷新查看结果', 'warning');
+                    }, 300000); // 5分钟超时
+                    
+                } else {
+                    console.error('批量生成关键词API失败:', data);
+                    showNotification('❌ 批量关键词生成失败: ' + (data.error || data.message || '未知错误'), 'error');
+                }
+            } catch (error) {
+                console.error('批量生成关键词失败:', error);
+                showNotification('❌ 网络错误，请检查连接', 'error');
+            }
+        }
+
+        // 显示树统计信息
+        function showTreeStats() {
+            if (!currentTree) return;
+            
+            const nodes = Object.values(currentTree.tree.nodes);
+            const totalNodes = nodes.length;
+            const completedNodes = nodes.filter(n => n.status === 'completed').length;
+            const nodesWithKeywords = nodes.filter(n => n.keywords && n.keywords.length > 0).length;
+            const nodesWithImages = nodes.filter(n => n.image_data).length;
+            
+            const avgQuality = nodes
+                .filter(n => n.quality_score > 0)
+                .reduce((sum, n) => sum + n.quality_score, 0) / 
+                nodes.filter(n => n.quality_score > 0).length || 0;
+            
+            const stats = `📊 创作树统计信息
+            
+🌳 总节点数: ${totalNodes}
+✅ 已完成: ${completedNodes}
+🖼️ 有图像: ${nodesWithImages}
+🏷️ 有关键词: ${nodesWithKeywords}
+⭐ 平均质量: ${avgQuality.toFixed(1)}/10
+            
+📝 根提示词: "${currentTree.tree.nodes[currentTree.tree.root_id]?.prompt || '未知'}"
+📅 创建时间: ${new Date(currentTree.tree.created_at).toLocaleString()}`;
+            
+            alert(stats);
+        }
         async function regenerateImage(nodeId) {
             if (!currentTree) return;
+            
+            // 检查是否已经在重新生成中
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (nodeElement && nodeElement.querySelector('.regenerating-overlay')) {
+                showNotification('⚠️ 该图像正在重新生成中，请稍候...', 'warning');
+                return;
+            }
             
             // 确认对话框
             const confirmed = confirm('确定要重新生成这张图像吗？\n\n这将替换当前图像，操作不可撤销。');
             if (!confirmed) return;
             
             try {
-                // 更新节点状态为生成中
-                if (currentTree.tree.nodes[nodeId]) {
-                    currentTree.tree.nodes[nodeId].status = 'generating';
-                    currentTree.tree.nodes[nodeId].image_data = null;
-                    renderTree(currentTree.tree);
-                }
+                // 保存原始图像数据，以便失败时恢复
+                const originalNode = { ...currentTree.tree.nodes[nodeId] };
+                
+                // 在图像上添加重新生成中的遮罩，而不是清空图像
+                addRegeneratingOverlay(nodeId);
                 
                 showNotification('🔄 开始重新生成图像...', 'success');
                 
@@ -1876,21 +2204,218 @@
                     
                     // 开始轮询重新生成状态
                     if (data.task_id) {
-                        pollTask(data.task_id, (result) => {
-                            updateNodeImage(nodeId, result);
-                            showNotification('✅ 图像重新生成完成！', 'success');
-                        });
+                        pollRegenerateTask(data.task_id, nodeId, originalNode);
                     }
                 } else {
                     showNotification('❌ 重新生成失败: ' + data.error, 'error');
-                    // 恢复节点状态
-                    await refreshTreeData();
+                    // 移除遮罩
+                    removeRegeneratingOverlay(nodeId);
                 }
             } catch (error) {
                 console.error('重新生成图像失败:', error);
                 showNotification('❌ 网络错误', 'error');
-                // 恢复节点状态
-                await refreshTreeData();
+                // 移除遮罩
+                removeRegeneratingOverlay(nodeId);
+            }
+        }
+
+        // 添加重新生成中的遮罩
+        function addRegeneratingOverlay(nodeId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const imageContainer = nodeElement.querySelector('.image-container');
+            if (!imageContainer) return;
+            
+            // 检查是否已经有遮罩
+            if (imageContainer.querySelector('.regenerating-overlay')) return;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'regenerating-overlay';
+            overlay.innerHTML = `
+                <div class="regenerating-content">
+                    <div class="regenerating-spinner"></div>
+                    <div class="regenerating-text">🔄 重新生成中...</div>
+                </div>
+            `;
+            
+            imageContainer.style.position = 'relative';
+            imageContainer.appendChild(overlay);
+            
+            // 禁用重新生成按钮
+            disableRegenerateButton(nodeId);
+        }
+
+        // 移除重新生成中的遮罩
+        function removeRegeneratingOverlay(nodeId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const overlay = nodeElement.querySelector('.regenerating-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+            
+            // 重新启用重新生成按钮
+            enableRegenerateButton(nodeId);
+        }
+
+        // 禁用重新生成按钮
+        function disableRegenerateButton(nodeId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const regenerateBtn = nodeElement.querySelector('button[onclick*="regenerateImage"]');
+            if (regenerateBtn) {
+                regenerateBtn.disabled = true;
+                regenerateBtn.style.opacity = '0.5';
+                regenerateBtn.style.cursor = 'not-allowed';
+                regenerateBtn.title = '正在重新生成中，请稍候...';
+            }
+        }
+
+        // 启用重新生成按钮
+        function enableRegenerateButton(nodeId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const regenerateBtn = nodeElement.querySelector('button[onclick*="regenerateImage"]');
+            if (regenerateBtn) {
+                regenerateBtn.disabled = false;
+                regenerateBtn.style.opacity = '1';
+                regenerateBtn.style.cursor = 'pointer';
+                regenerateBtn.title = '重新生成此图像';
+            }
+        }
+
+        // 轮询重新生成任务状态
+        function pollRegenerateTask(taskId, nodeId, originalNode) {
+            // 增加活动任务计数
+            incrementActiveTasks();
+            
+            let pollCount = 0;
+            const maxPolls = 150; // 5分钟 (150 * 2秒)
+            
+            const checkInterval = setInterval(async () => {
+                try {
+                    pollCount++;
+                    
+                    // 更新进度显示
+                    updateRegeneratingProgress(nodeId, pollCount, maxPolls);
+                    
+                    const taskResponse = await fetch(`/api/check_task/${taskId}`);
+                    const taskData = await taskResponse.json();
+                    
+                    if (taskData.status === 'completed') {
+                        clearInterval(checkInterval);
+                        decrementActiveTasks(); // 任务完成，减少计数
+                        
+                        // 重新加载节点数据
+                        const nodeResponse = await fetch(`/api/get_tree/${currentTree.tree_id}`);
+                        const treeData = await nodeResponse.json();
+                        
+                        if (nodeResponse.ok && treeData.nodes[nodeId]) {
+                            // 更新节点数据
+                            currentTree.tree.nodes[nodeId] = treeData.nodes[nodeId];
+                            
+                            // 平滑替换图像
+                            smoothReplaceNodeImage(nodeId, treeData.nodes[nodeId]);
+                            
+                            showNotification('✅ 图像重新生成完成！', 'success');
+                        } else {
+                            removeRegeneratingOverlay(nodeId);
+                            showNotification('❌ 获取新图像失败', 'error');
+                        }
+                        
+                    } else if (taskData.status === 'failed') {
+                        clearInterval(checkInterval);
+                        decrementActiveTasks(); // 任务失败，减少计数
+                        removeRegeneratingOverlay(nodeId);
+                        showNotification('❌ 图像重新生成失败: ' + (taskData.error || '未知错误'), 'error');
+                        
+                    } else if (taskData.status === 'not_found') {
+                        clearInterval(checkInterval);
+                        decrementActiveTasks(); // 任务不存在，减少计数
+                        removeRegeneratingOverlay(nodeId);
+                        showNotification('❌ 任务不存在或已过期', 'error');
+                        
+                    } else if (pollCount >= maxPolls) {
+                        // 超时处理
+                        clearInterval(checkInterval);
+                        decrementActiveTasks(); // 超时，减少计数
+                        removeRegeneratingOverlay(nodeId);
+                        showNotification('⏰ 重新生成超时，请手动刷新查看结果', 'warning');
+                    }
+                    
+                } catch (error) {
+                    console.error('检查重新生成任务状态失败:', error);
+                    // 不要因为单次检查失败就停止整个监控
+                }
+            }, 2000); // 每2秒检查一次
+        }
+
+        // 更新重新生成进度显示
+        function updateRegeneratingProgress(nodeId, pollCount, maxPolls) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const progressText = nodeElement.querySelector('.regenerating-text');
+            if (!progressText) return;
+            
+            const progress = Math.min((pollCount / maxPolls) * 100, 95); // 最多显示95%
+            const dots = '.'.repeat((pollCount % 4) + 1); // 动态点点点效果
+            
+            progressText.innerHTML = `🔄 重新生成中${dots}<br><small>${progress.toFixed(0)}%</small>`;
+        }
+
+        // 平滑替换节点图像
+        function smoothReplaceNodeImage(nodeId, newNodeData) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const imageContainer = nodeElement.querySelector('.image-container');
+            if (!imageContainer) return;
+            
+            // 移除遮罩
+            removeRegeneratingOverlay(nodeId);
+            
+            // 创建新图像元素
+            const newImg = document.createElement('img');
+            newImg.src = `data:image/png;base64,${newNodeData.image_data}`;
+            newImg.className = 'node-image';
+            newImg.alt = 'Generated Image';
+            newImg.onclick = () => showFullscreen(newImg.src, nodeId);
+            newImg.title = '点击查看大图 - 支持同级导航和四格对比';
+            
+            // 淡入效果
+            newImg.style.opacity = '0';
+            newImg.style.transition = 'opacity 0.5s ease-in-out';
+            
+            // 替换图像
+            const oldImg = imageContainer.querySelector('.node-image');
+            if (oldImg) {
+                imageContainer.replaceChild(newImg, oldImg);
+            } else {
+                imageContainer.appendChild(newImg);
+            }
+            
+            // 触发淡入动画
+            setTimeout(() => {
+                newImg.style.opacity = '1';
+            }, 50);
+            
+            // 更新质量评分显示
+            updateNodeQualityDisplay(nodeId, newNodeData);
+        }
+
+        // 更新节点质量显示
+        function updateNodeQualityDisplay(nodeId, nodeData) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (!nodeElement) return;
+            
+            const qualityElement = nodeElement.querySelector('.quality-score');
+            if (qualityElement && nodeData.quality_score) {
+                qualityElement.textContent = `⭐ ${nodeData.quality_score.toFixed(1)}/10`;
             }
         }
 
@@ -1926,11 +2451,23 @@
         let currentSiblings = [];
         let currentImageIndex = 0;
         let isGridView = false;
+        
+        // 图像缩放相关变量
+        let imageScale = 1;
+        let imageTranslateX = 0;
+        let imageTranslateY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let zoomIndicatorTimeout = null;
 
         // 全屏预览功能
         async function showFullscreen(imageSrc, nodeId) {
             const overlay = document.getElementById('fullscreenOverlay');
             const image = document.getElementById('fullscreenImage');
+            
+            // 重置缩放状态
+            resetImageZoom();
             
             // 获取同级分支数据
             try {
@@ -1962,8 +2499,166 @@
             
             overlay.classList.add('show');
             
+            // 初始化缩放功能
+            initImageZoom();
+            
             // 阻止事件冒泡
             if (event) event.stopPropagation();
+        }
+        
+        // 初始化图像缩放功能
+        function initImageZoom() {
+            const image = document.getElementById('fullscreenImage');
+            const overlay = document.getElementById('fullscreenOverlay');
+            
+            // 鼠标滚轮缩放
+            overlay.addEventListener('wheel', handleImageZoom, { passive: false });
+            
+            // 鼠标拖拽移动
+            image.addEventListener('mousedown', handleDragStart);
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
+            
+            // 双击重置
+            image.addEventListener('dblclick', handleImageDoubleClick);
+            
+            // 阻止图片点击事件冒泡到overlay
+            image.addEventListener('click', handleImageClick);
+        }
+        
+        // 处理图片点击
+        function handleImageClick(e) {
+            // 阻止事件冒泡到overlay，防止关闭全屏
+            e.stopPropagation();
+        }
+        
+        // 处理图片双击
+        function handleImageDoubleClick(e) {
+            // 如果已经放大，重置缩放
+            if (imageScale > 1) {
+                resetImageZoom();
+            }
+            // 阻止事件冒泡
+            e.stopPropagation();
+        }
+        
+        // 处理图像缩放
+        function handleImageZoom(e) {
+            // 只在单图视图中启用缩放
+            if (isGridView) return;
+            
+            // 检查是否点击在图片上
+            const image = document.getElementById('fullscreenImage');
+            const rect = image.getBoundingClientRect();
+            const isOnImage = (
+                e.clientX >= rect.left &&
+                e.clientX <= rect.right &&
+                e.clientY >= rect.top &&
+                e.clientY <= rect.bottom
+            );
+            
+            // 只在图片上滚动时才缩放
+            if (!isOnImage) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            
+            // 计算新的缩放比例
+            const newScale = Math.max(0.5, Math.min(5, imageScale + delta));
+            
+            if (newScale !== imageScale) {
+                imageScale = newScale;
+                applyImageTransform();
+                showZoomIndicator();
+                
+                // 如果缩放比例大于1，添加zoomed类
+                if (imageScale > 1) {
+                    image.classList.add('zoomed');
+                } else {
+                    image.classList.remove('zoomed');
+                    // 重置位置
+                    imageTranslateX = 0;
+                    imageTranslateY = 0;
+                }
+            }
+        }
+        
+        // 处理拖拽开始
+        function handleDragStart(e) {
+            if (imageScale <= 1) return;
+            
+            isDragging = true;
+            dragStartX = e.clientX - imageTranslateX;
+            dragStartY = e.clientY - imageTranslateY;
+            
+            // 阻止事件冒泡，防止触发关闭全屏
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // 处理拖拽移动
+        function handleDragMove(e) {
+            if (!isDragging) return;
+            
+            imageTranslateX = e.clientX - dragStartX;
+            imageTranslateY = e.clientY - dragStartY;
+            
+            applyImageTransform();
+            
+            // 阻止事件冒泡
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // 处理拖拽结束
+        function handleDragEnd(e) {
+            if (isDragging) {
+                isDragging = false;
+                // 阻止事件冒泡
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+        
+        // 应用图像变换
+        function applyImageTransform() {
+            const image = document.getElementById('fullscreenImage');
+            image.style.transform = `scale(${imageScale}) translate(${imageTranslateX / imageScale}px, ${imageTranslateY / imageScale}px)`;
+        }
+        
+        // 重置图像缩放
+        function resetImageZoom() {
+            const image = document.getElementById('fullscreenImage');
+            
+            imageScale = 1;
+            imageTranslateX = 0;
+            imageTranslateY = 0;
+            
+            image.style.transform = 'scale(1) translate(0, 0)';
+            image.classList.remove('zoomed');
+            
+            showZoomIndicator();
+        }
+        
+        // 显示缩放指示器
+        function showZoomIndicator() {
+            const indicator = document.getElementById('zoomIndicator');
+            const percentage = Math.round(imageScale * 100);
+            
+            indicator.textContent = `🔍 ${percentage}%`;
+            indicator.classList.add('show');
+            
+            // 清除之前的定时器
+            if (zoomIndicatorTimeout) {
+                clearTimeout(zoomIndicatorTimeout);
+            }
+            
+            // 2秒后隐藏
+            zoomIndicatorTimeout = setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
         }
 
         function updateFullscreenImage() {
@@ -1971,6 +2666,9 @@
             
             const currentSibling = currentSiblings[currentImageIndex];
             const image = document.getElementById('fullscreenImage');
+            
+            // 重置缩放
+            resetImageZoom();
             
             image.src = `data:image/png;base64,${currentSibling.image_data}`;
             updateImageInfo(currentSibling);
@@ -1985,12 +2683,21 @@
             if (sibling) {
                 versionBadge.textContent = sibling.branch_info.version;
                 imagePrompt.textContent = sibling.prompt;
-                imageQuality.textContent = `质量评分: ${sibling.quality_score.toFixed(1)}/10`;
+                imageQuality.innerHTML = `
+                    质量评分: ${sibling.quality_score.toFixed(1)}/10
+                    <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">
+                        💡 滚轮缩放 | 拖拽移动 | 双击重置
+                    </div>
+                `;
                 imageIndex.textContent = `${currentImageIndex + 1} / ${currentSiblings.length}`;
             } else {
                 versionBadge.textContent = '';
                 imagePrompt.textContent = '';
-                imageQuality.textContent = '';
+                imageQuality.innerHTML = `
+                    <div style="font-size: 11px; opacity: 0.8;">
+                        💡 滚轮缩放 | 拖拽移动 | 双击重置
+                    </div>
+                `;
                 imageIndex.textContent = '';
             }
         }
@@ -2067,7 +2774,20 @@
             if (event) event.stopPropagation();
             
             const overlay = document.getElementById('fullscreenOverlay');
+            const image = document.getElementById('fullscreenImage');
+            
             overlay.classList.remove('show');
+            
+            // 清理事件监听器
+            overlay.removeEventListener('wheel', handleImageZoom);
+            image.removeEventListener('mousedown', handleDragStart);
+            document.removeEventListener('mousemove', handleDragMove);
+            document.removeEventListener('mouseup', handleDragEnd);
+            image.removeEventListener('dblclick', handleImageDoubleClick);
+            image.removeEventListener('click', handleImageClick);
+            
+            // 重置缩放状态
+            resetImageZoom();
             
             // 重置视图
             const singleView = document.getElementById('singleView');
@@ -3067,10 +3787,7 @@
                     document.getElementById('recentTreesPanel').style.display = 'none';
                     showNotification('✅ 创作加载完成！', 'success');
                     
-                    // 开始自动刷新以显示关键词更新
-                    startAutoRefresh();
-                    
-                    // 自动检查并提取缺失的关键词
+                    // 自动检查并提取缺失的关键词（会自动启动刷新）
                     await autoExtractMissingKeywords(treeId);
                 } else {
                     showNotification('❌ 加载失败: ' + treeData.error, 'error');
@@ -3111,13 +3828,27 @@
 
         // 定期刷新树数据以显示自动提取的关键词
         let autoRefreshInterval = null;
+        let activeTasksCount = 0; // 跟踪活动任务数量
 
         function startAutoRefresh() {
+            // 只有在有活动任务时才启动自动刷新
+            if (activeTasksCount === 0) {
+                console.log('没有活动任务，跳过自动刷新');
+                return;
+            }
+            
             if (autoRefreshInterval) {
                 clearInterval(autoRefreshInterval);
             }
             
             autoRefreshInterval = setInterval(async () => {
+                // 如果没有活动任务，停止刷新
+                if (activeTasksCount === 0) {
+                    console.log('所有任务已完成，停止自动刷新');
+                    stopAutoRefresh();
+                    return;
+                }
+                
                 if (currentTree) {
                     try {
                         const response = await fetch(`/api/get_tree/${currentTree.tree_id}`);
@@ -3157,6 +3888,26 @@
                 autoRefreshInterval = null;
             }
         }
+        
+        // 增加活动任务计数
+        function incrementActiveTasks() {
+            activeTasksCount++;
+            console.log(`活动任务数: ${activeTasksCount}`);
+            // 如果这是第一个任务，启动自动刷新
+            if (activeTasksCount === 1) {
+                startAutoRefresh();
+            }
+        }
+        
+        // 减少活动任务计数
+        function decrementActiveTasks() {
+            activeTasksCount = Math.max(0, activeTasksCount - 1);
+            console.log(`活动任务数: ${activeTasksCount}`);
+            // 如果没有任务了，停止自动刷新
+            if (activeTasksCount === 0) {
+                stopAutoRefresh();
+            }
+        }
 
         // 删除生成树
         async function deleteTree(treeId, treePrompt, event) {
@@ -3193,6 +3944,8 @@
                                 <p>每个节点都可以继续分支，探索不同的创意方向</p>
                             </div>
                         `;
+                        // 重置任务计数并停止刷新
+                        activeTasksCount = 0;
                         stopAutoRefresh();
                     }
                     
@@ -3337,6 +4090,100 @@
         }
 
         // 调试质量设置
+        
+        // ==================== 数据库管理功能 ====================
+        
+        // 刷新数据库统计信息
+        async function refreshDatabaseStats() {
+            try {
+                showNotification('📊 正在加载数据库统计...', 'success');
+                
+                const response = await fetch('/api/database/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    
+                    // 更新UI显示
+                    document.getElementById('dbSize').textContent = `${stats.database_size_mb} MB`;
+                    document.getElementById('dbImageSize').textContent = `${stats.image_data_size_mb} MB`;
+                    document.getElementById('dbTreesCount').textContent = stats.trees_count;
+                    document.getElementById('dbNodesCount').textContent = stats.nodes_count;
+                    
+                    // 添加颜色提示
+                    const dbSizeElement = document.getElementById('dbSize');
+                    if (stats.database_size_mb > 500) {
+                        dbSizeElement.style.color = '#e53e3e';
+                        dbSizeElement.style.fontWeight = 'bold';
+                    } else if (stats.database_size_mb > 200) {
+                        dbSizeElement.style.color = '#f6ad55';
+                    } else {
+                        dbSizeElement.style.color = '#48bb78';
+                    }
+                    
+                    showNotification('✅ 统计信息已更新', 'success');
+                } else {
+                    showNotification('❌ 加载失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('加载数据库统计失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+        
+        // 重置数据库
+        async function resetDatabase() {
+            const confirmed = confirm('⚠️ 确定要初始化数据库吗？\n\n此操作将：\n• 删除所有创作树和节点\n• 清空所有图像数据\n• 收缩数据库文件\n• 保留用户设置\n\n操作不可撤销！');
+            if (!confirmed) return;
+            
+            const doubleConfirm = confirm('⚠️ 再次确认：\n\n这将永久删除所有创作历史！\n\n确定要继续吗？');
+            if (!doubleConfirm) return;
+            
+            try {
+                showNotification('🗑️ 正在初始化数据库，请稍候...', 'warning');
+                
+                const response = await fetch('/api/database/reset', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(`✅ ${data.message}`, 'success');
+                    
+                    // 刷新统计信息
+                    setTimeout(() => {
+                        refreshDatabaseStats();
+                        loadRecentTrees();
+                        
+                        // 清空当前树
+                        currentTree = null;
+                        document.getElementById('treeVisualization').innerHTML = `
+                            <div class="empty-state">
+                                <h3>🎨 准备开始你的创意之旅</h3>
+                                <p>输入一个简单的提示词，系统将为你生成一棵创意树</p>
+                                <p>每个节点都可以继续分支，探索不同的创意方向</p>
+                            </div>
+                        `;
+                        document.getElementById('treeToolbar').style.display = 'none';
+                    }, 1000);
+                } else {
+                    showNotification('❌ 初始化失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('初始化数据库失败:', error);
+                showNotification('❌ 网络错误', 'error');
+            }
+        }
+        
+        // 页面加载时自动加载数据库统计
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟加载，避免影响页面初始化
+            setTimeout(() => {
+                refreshDatabaseStats();
+            }, 1000);
+        });
+
         async function debugQualitySettings() {
             try {
                 const response = await fetch('/api/quality_settings');
@@ -3381,6 +4228,7 @@
             Object.values(pollingIntervals).forEach(interval => {
                 clearInterval(interval);
             });
+            activeTasksCount = 0; // 重置任务计数
             stopAutoRefresh();
         });
     </script>

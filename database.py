@@ -1,8 +1,31 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 简单的SQLite数据库管理系统
 用于存储生成任务、树结构和优化性能
 """
+
+import sys
+import os
+
+# Windows编码兼容性设置
+if sys.platform.startswith('win'):
+    import codecs
+    try:
+        # 设置环境变量
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
+        os.environ['PYTHONUTF8'] = '1'
+        
+        # 重新配置标准输入输出流
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        else:
+            # 对于较老的Python版本，使用包装器
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach(), errors='replace')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach(), errors='replace')
+    except Exception:
+        pass
 
 import sqlite3
 import json
@@ -21,9 +44,28 @@ class TreeDatabase:
         self.db_path = db_path
         self.init_database()
     
+    def _get_connection(self):
+        """获取配置好的数据库连接"""
+        conn = sqlite3.connect(self.db_path)
+        # 设置连接参数以确保UTF-8编码正确处理
+        conn.execute("PRAGMA encoding = 'UTF-8'")
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
+        # 设置文本工厂以确保字符串正确处理
+        conn.text_factory = str
+        return conn
+    
     def init_database(self):
         """初始化数据库表结构"""
-        with sqlite3.connect(self.db_path) as conn:
+        # 确保SQLite使用UTF-8编码
+        with self._get_connection() as conn:
+            # 设置SQLite连接的编码和其他参数
+            conn.execute("PRAGMA encoding = 'UTF-8'")
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
+            conn.execute("PRAGMA temp_store = MEMORY")
+            conn.execute("PRAGMA mmap_size = 268435456")  # 256MB
+            
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS trees (
                     tree_id TEXT PRIMARY KEY,
@@ -101,7 +143,7 @@ class TreeDatabase:
         """创建新的生成树"""
         tree_id = str(uuid.uuid4())
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             conn.execute('''
                 INSERT INTO trees (tree_id, root_prompt, metadata)
                 VALUES (?, ?, ?)
@@ -130,7 +172,7 @@ class TreeDatabase:
         """添加新节点"""
         node_id = str(uuid.uuid4())
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             # 计算分支信息
             if parent_id:
                 parent_info = conn.execute('''
@@ -190,7 +232,7 @@ class TreeDatabase:
             set_clauses.append("updated_at = CURRENT_TIMESTAMP")
             values.append(node_id)
             
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 conn.execute(f'''
                     UPDATE nodes SET {', '.join(set_clauses)}
                     WHERE node_id = ?
@@ -199,7 +241,7 @@ class TreeDatabase:
     
     def get_tree(self, tree_id: str) -> Optional[Dict]:
         """获取完整的树结构"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             # 获取树信息
             tree_info = conn.execute('''
                 SELECT tree_id, root_prompt, created_at, status, metadata
@@ -262,7 +304,7 @@ class TreeDatabase:
     
     def get_node(self, node_id: str) -> Optional[Dict]:
         """获取单个节点信息"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             node_data = conn.execute('''
                 SELECT node_id, tree_id, parent_id, prompt, image_path, image_data,
                        keywords, quality_score, accuracy_score, status, branch_info
@@ -293,7 +335,7 @@ class TreeDatabase:
         """创建生成任务"""
         task_id = str(uuid.uuid4())
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             conn.execute('''
                 INSERT INTO generation_tasks (task_id, tree_id, node_id, task_type)
                 VALUES (?, ?, ?, ?)
@@ -304,7 +346,7 @@ class TreeDatabase:
     
     def update_task(self, task_id: str, status: str, result: Any = None, error: str = None):
         """更新任务状态"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             if status == 'completed':
                 conn.execute('''
                     UPDATE generation_tasks 
@@ -321,7 +363,7 @@ class TreeDatabase:
     
     def get_task(self, task_id: str) -> Optional[Dict]:
         """获取任务信息"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             task_data = conn.execute('''
                 SELECT task_id, tree_id, node_id, task_type, status, result, error_message
                 FROM generation_tasks WHERE task_id = ?
@@ -343,9 +385,9 @@ class TreeDatabase:
     def cache_keywords(self, prompt: str, keywords: List[Dict]):
         """缓存关键词提取结果"""
         import hashlib
-        prompt_hash = hashlib.md5(prompt.encode()).hexdigest()
+        prompt_hash = hashlib.md5(prompt.encode('utf-8')).hexdigest()
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             # 检查是否已存在
             existing = conn.execute('''
                 SELECT usage_count FROM keyword_cache WHERE prompt_hash = ?
@@ -369,9 +411,9 @@ class TreeDatabase:
     def get_cached_keywords(self, prompt: str) -> Optional[List[Dict]]:
         """获取缓存的关键词"""
         import hashlib
-        prompt_hash = hashlib.md5(prompt.encode()).hexdigest()
+        prompt_hash = hashlib.md5(prompt.encode('utf-8')).hexdigest()
         
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             result = conn.execute('''
                 SELECT keywords FROM keyword_cache WHERE prompt_hash = ?
             ''', (prompt_hash,)).fetchone()
@@ -382,7 +424,7 @@ class TreeDatabase:
     
     def get_recent_trees(self, limit: int = 10) -> List[Dict]:
         """获取最近的生成树"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             trees_data = conn.execute('''
                 SELECT tree_id, root_prompt, created_at, status
                 FROM trees 
@@ -403,7 +445,7 @@ class TreeDatabase:
     def delete_tree(self, tree_id: str) -> bool:
         """删除生成树及其所有相关数据"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 # 获取所有节点的图像路径，用于删除文件
                 image_paths = conn.execute('''
                     SELECT image_path FROM nodes 
@@ -457,7 +499,7 @@ class TreeDatabase:
     def save_user_setting(self, key: str, value: Any):
         """保存用户设置"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 conn.execute('''
                     INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
                     VALUES (?, ?, CURRENT_TIMESTAMP)
@@ -470,7 +512,7 @@ class TreeDatabase:
     def get_user_setting(self, key: str, default_value: Any = None) -> Any:
         """获取用户设置"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 result = conn.execute('''
                     SELECT setting_value FROM user_settings WHERE setting_key = ?
                 ''', (key,)).fetchone()
@@ -485,7 +527,7 @@ class TreeDatabase:
     def get_all_user_settings(self) -> Dict[str, Any]:
         """获取所有用户设置"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 results = conn.execute('''
                     SELECT setting_key, setting_value FROM user_settings
                 ''').fetchall()
@@ -505,7 +547,7 @@ class TreeDatabase:
     
     def cleanup_old_data(self, days: int = 30):
         """清理旧数据"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             # 清理旧的已完成任务
             conn.execute('''
                 DELETE FROM generation_tasks 
@@ -521,6 +563,252 @@ class TreeDatabase:
             '''.format(days))
             
             conn.commit()
+    
+    def get_database_stats(self) -> Dict[str, Any]:
+        """获取数据库统计信息"""
+        with self._get_connection() as conn:
+            # 获取数据库文件大小
+            db_size = Path(self.db_path).stat().st_size if Path(self.db_path).exists() else 0
+            
+            # 获取各表的记录数
+            trees_count = conn.execute('SELECT COUNT(*) FROM trees').fetchone()[0]
+            nodes_count = conn.execute('SELECT COUNT(*) FROM nodes').fetchone()[0]
+            tasks_count = conn.execute('SELECT COUNT(*) FROM generation_tasks').fetchone()[0]
+            cache_count = conn.execute('SELECT COUNT(*) FROM keyword_cache').fetchone()[0]
+            
+            # 获取有图像数据的节点数
+            nodes_with_images = conn.execute('''
+                SELECT COUNT(*) FROM nodes WHERE image_data IS NOT NULL
+            ''').fetchone()[0]
+            
+            # 获取图像数据总大小（估算）
+            image_data_size = conn.execute('''
+                SELECT SUM(LENGTH(image_data)) FROM nodes WHERE image_data IS NOT NULL
+            ''').fetchone()[0] or 0
+            
+            # 获取最老的记录
+            oldest_tree = conn.execute('''
+                SELECT created_at FROM trees ORDER BY created_at ASC LIMIT 1
+            ''').fetchone()
+            
+            # 获取最新的记录
+            newest_tree = conn.execute('''
+                SELECT created_at FROM trees ORDER BY created_at DESC LIMIT 1
+            ''').fetchone()
+            
+            # 获取失败的任务数
+            failed_tasks = conn.execute('''
+                SELECT COUNT(*) FROM generation_tasks WHERE status = 'failed'
+            ''').fetchone()[0]
+            
+            # 获取待处理的任务数
+            pending_tasks = conn.execute('''
+                SELECT COUNT(*) FROM generation_tasks WHERE status = 'pending'
+            ''').fetchone()[0]
+            
+            return {
+                'database_size': db_size,
+                'database_size_mb': round(db_size / (1024 * 1024), 2),
+                'trees_count': trees_count,
+                'nodes_count': nodes_count,
+                'nodes_with_images': nodes_with_images,
+                'tasks_count': tasks_count,
+                'cache_count': cache_count,
+                'image_data_size': image_data_size,
+                'image_data_size_mb': round(image_data_size / (1024 * 1024), 2),
+                'failed_tasks': failed_tasks,
+                'pending_tasks': pending_tasks,
+                'oldest_tree': oldest_tree[0] if oldest_tree else None,
+                'newest_tree': newest_tree[0] if newest_tree else None
+            }
+    
+    def cleanup_image_data(self, keep_recent_days: int = 7) -> Dict[str, int]:
+        """清理图像数据（保留最近N天的数据）"""
+        with self._get_connection() as conn:
+            # 获取要清理的节点
+            nodes_to_clean = conn.execute('''
+                SELECT node_id, tree_id FROM nodes 
+                WHERE image_data IS NOT NULL 
+                AND datetime(created_at) < datetime('now', '-{} days')
+            '''.format(keep_recent_days)).fetchall()
+            
+            cleaned_count = 0
+            for node_id, tree_id in nodes_to_clean:
+                # 只清除image_data，保留image_path引用
+                conn.execute('''
+                    UPDATE nodes SET image_data = NULL 
+                    WHERE node_id = ?
+                ''', (node_id,))
+                cleaned_count += 1
+            
+            conn.commit()
+            
+            return {
+                'cleaned_nodes': cleaned_count,
+                'message': f'已清理 {cleaned_count} 个节点的图像数据（保留了最近{keep_recent_days}天的数据）'
+            }
+    
+    def vacuum_database(self) -> Dict[str, Any]:
+        """优化数据库（VACUUM操作）"""
+        try:
+            # 获取优化前的大小
+            before_size = Path(self.db_path).stat().st_size if Path(self.db_path).exists() else 0
+            
+            with self._get_connection() as conn:
+                conn.execute('VACUUM')
+                conn.commit()
+            
+            # 获取优化后的大小
+            after_size = Path(self.db_path).stat().st_size if Path(self.db_path).exists() else 0
+            saved_size = before_size - after_size
+            
+            return {
+                'success': True,
+                'before_size_mb': round(before_size / (1024 * 1024), 2),
+                'after_size_mb': round(after_size / (1024 * 1024), 2),
+                'saved_size_mb': round(saved_size / (1024 * 1024), 2),
+                'message': f'数据库优化完成，节省了 {round(saved_size / (1024 * 1024), 2)} MB 空间'
+            }
+        except Exception as e:
+            logger.error(f"数据库优化失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'数据库优化失败: {str(e)}'
+            }
+    
+    def cleanup_failed_tasks(self) -> int:
+        """清理失败的任务记录"""
+        with self._get_connection() as conn:
+            result = conn.execute('''
+                DELETE FROM generation_tasks WHERE status = 'failed'
+            ''')
+            deleted_count = result.rowcount
+            conn.commit()
+            return deleted_count
+    
+    def cleanup_orphaned_nodes(self) -> int:
+        """清理孤立节点（没有关联树的节点）"""
+        with self._get_connection() as conn:
+            result = conn.execute('''
+                DELETE FROM nodes 
+                WHERE tree_id NOT IN (SELECT tree_id FROM trees)
+            ''')
+            deleted_count = result.rowcount
+            conn.commit()
+            return deleted_count
+    
+    def get_large_trees(self, min_nodes: int = 20) -> List[Dict]:
+        """获取大型树（节点数超过阈值）"""
+        with self._get_connection() as conn:
+            results = conn.execute('''
+                SELECT t.tree_id, t.root_prompt, t.created_at, COUNT(n.node_id) as node_count,
+                       SUM(CASE WHEN n.image_data IS NOT NULL THEN LENGTH(n.image_data) ELSE 0 END) as total_image_size
+                FROM trees t
+                LEFT JOIN nodes n ON t.tree_id = n.tree_id
+                GROUP BY t.tree_id
+                HAVING node_count >= ?
+                ORDER BY node_count DESC
+            ''', (min_nodes,)).fetchall()
+            
+            return [
+                {
+                    'tree_id': row[0],
+                    'root_prompt': row[1],
+                    'created_at': row[2],
+                    'node_count': row[3],
+                    'total_image_size_mb': round((row[4] or 0) / (1024 * 1024), 2)
+                }
+                for row in results
+            ]
+    
+    def export_tree_metadata(self, tree_id: str) -> Optional[Dict]:
+        """导出树的元数据（不包含图像数据）"""
+        tree = self.get_tree(tree_id)
+        if not tree:
+            return None
+        
+        # 移除图像数据，只保留元数据
+        for node_id, node in tree['nodes'].items():
+            node['image_data'] = None  # 不导出图像数据
+            node['has_image'] = bool(node.get('image_path'))
+        
+        return tree
+    
+    def batch_delete_old_trees(self, days: int = 30, keep_count: int = 10) -> Dict[str, Any]:
+        """批量删除旧树（保留最近N个）"""
+        with self._get_connection() as conn:
+            # 获取要删除的树ID
+            trees_to_delete = conn.execute('''
+                SELECT tree_id FROM trees 
+                WHERE datetime(created_at) < datetime('now', '-{} days')
+                AND tree_id NOT IN (
+                    SELECT tree_id FROM trees 
+                    ORDER BY created_at DESC 
+                    LIMIT {}
+                )
+            '''.format(days, keep_count)).fetchall()
+            
+            deleted_count = 0
+            deleted_nodes = 0
+            
+            for (tree_id,) in trees_to_delete:
+                # 获取节点数
+                node_count = conn.execute('''
+                    SELECT COUNT(*) FROM nodes WHERE tree_id = ?
+                ''', (tree_id,)).fetchone()[0]
+                
+                # 删除树
+                if self.delete_tree(tree_id):
+                    deleted_count += 1
+                    deleted_nodes += node_count
+            
+            return {
+                'deleted_trees': deleted_count,
+                'deleted_nodes': deleted_nodes,
+                'message': f'已删除 {deleted_count} 个旧树，共 {deleted_nodes} 个节点'
+            }
+    
+    def reset_database(self) -> Dict[str, Any]:
+        """重置数据库：清空所有数据并收缩数据库"""
+        try:
+            # 获取重置前的大小
+            before_size = Path(self.db_path).stat().st_size if Path(self.db_path).exists() else 0
+            
+            with self._get_connection() as conn:
+                # 清空所有表
+                conn.execute('DELETE FROM generation_tasks')
+                conn.execute('DELETE FROM nodes')
+                conn.execute('DELETE FROM trees')
+                conn.execute('DELETE FROM keyword_cache')
+                # 保留 user_settings 表，不删除用户配置
+                
+                conn.commit()
+                
+                # 执行 VACUUM 收缩数据库
+                conn.execute('VACUUM')
+                conn.commit()
+            
+            # 获取重置后的大小
+            after_size = Path(self.db_path).stat().st_size if Path(self.db_path).exists() else 0
+            saved_size = before_size - after_size
+            
+            logger.info(f"数据库已重置: {before_size} -> {after_size} bytes")
+            
+            return {
+                'success': True,
+                'before_size_mb': round(before_size / (1024 * 1024), 2),
+                'after_size_mb': round(after_size / (1024 * 1024), 2),
+                'saved_size_mb': round(saved_size / (1024 * 1024), 2),
+                'message': f'数据库已重置并优化，从 {round(before_size / (1024 * 1024), 2)} MB 降到 {round(after_size / (1024 * 1024), 2)} MB'
+            }
+        except Exception as e:
+            logger.error(f"数据库重置失败: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': f'数据库重置失败: {str(e)}'
+            }
 
 # 全局数据库实例
 db = TreeDatabase()

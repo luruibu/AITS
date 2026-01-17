@@ -1,8 +1,31 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 通用AI客户端系统
 支持多种AI服务：Ollama、OpenRouter、OpenAI兼容API等
 """
+
+import sys
+import os
+
+# Windows编码兼容性设置
+if sys.platform.startswith('win'):
+    import codecs
+    try:
+        # 设置环境变量
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
+        os.environ['PYTHONUTF8'] = '1'
+        
+        # 重新配置标准输入输出流
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        else:
+            # 对于较老的Python版本，使用包装器
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach(), errors='replace')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach(), errors='replace')
+    except Exception:
+        pass
 
 import asyncio
 import aiohttp

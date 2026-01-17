@@ -1,11 +1,33 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 国际化工具类
 提供多语言支持功能
 """
 
-import json
+import sys
 import os
+
+# Windows编码兼容性设置
+if sys.platform.startswith('win'):
+    import codecs
+    try:
+        # 设置环境变量
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
+        os.environ['PYTHONUTF8'] = '1'
+        
+        # 重新配置标准输入输出流
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        else:
+            # 对于较老的Python版本，使用包装器
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach(), errors='replace')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach(), errors='replace')
+    except Exception:
+        pass
+
+import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 from flask import session, request
@@ -29,7 +51,8 @@ class I18nManager:
         for file_path in self.i18n_dir.glob("*.json"):
             locale = file_path.stem
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                # 强制使用UTF-8编码读取翻译文件
+                with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                     self.translations[locale] = json.load(f)
                 self.supported_locales.append(locale)
                 print(f"Loaded translations for locale: {locale}")

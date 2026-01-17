@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 AI Image Generation Tree System
 A web-based creative exploration tool that generates branching image trees using Ollama and ComfyUI.
@@ -8,13 +9,51 @@ License: MIT
 Repository: https://github.com/yourusername/ai-image-tree
 """
 
+import sys
+import os
+
+# Windows编码兼容性设置 - 强化版本
+if sys.platform.startswith('win'):
+    import codecs
+    import locale
+    
+    try:
+        # 设置环境变量
+        os.environ['PYTHONIOENCODING'] = 'utf-8'
+        os.environ['PYTHONUTF8'] = '1'
+        
+        # 重新配置标准输入输出流
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+        else:
+            # 对于较老的Python版本，使用包装器
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach(), errors='replace')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach(), errors='replace')
+        
+        # 设置默认编码
+        if hasattr(sys, 'setdefaultencoding'):
+            sys.setdefaultencoding('utf-8')
+            
+        # 设置locale
+        try:
+            locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+        except locale.Error:
+            try:
+                locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+            except locale.Error:
+                pass  # 忽略locale设置失败
+                
+    except Exception as e:
+        print(f"Warning: Failed to set UTF-8 encoding: {e}")
+        pass
+
 from flask import Flask, render_template, request, jsonify, send_file
 import asyncio
 import aiohttp
 import json
 import base64
 import uuid
-import os
 from datetime import datetime
 from pathlib import Path
 import threading
@@ -37,9 +76,26 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 # 注册国际化函数
 register_i18n_functions(app)
 
-# 全局配置
-with open('config.json', 'r', encoding='utf-8') as f:
-    CONFIG = json.load(f)
+# 全局配置 - 使用安全的文件读取
+try:
+    with open('config.json', 'r', encoding='utf-8', errors='replace') as f:
+        CONFIG = json.load(f)
+except Exception as e:
+    print(f"Warning: Failed to load config.json: {e}")
+    # 使用默认配置
+    CONFIG = {
+        'ai_provider': {
+            'base_url': 'http://localhost:11434',
+            'model': 'gemma3:4b'
+        },
+        'comfyui': {
+            'url': 'http://localhost:8000'
+        },
+        'quality_control': {
+            'enabled': True,
+            'score_threshold': 7.0
+        }
+    }
 
 # 默认系统设置
 default_system_settings = {
@@ -355,6 +411,83 @@ async def get_ollama_models(ollama_url: str) -> list:
     except Exception as e:
         logger.error(f"获取 Ollama 模型列表失败: {e}")
         return []
+
+async def extract_keywords_force(prompt: str) -> list:
+    """强制提取提示词关键点 - 绕过缓存机制"""
+    system_prompt = """你是一个专业的视觉化关键词分析专家，专门为AI图像生成模型提取最适合的关键词。请从给定的提示词中提取8-10个具有强烈视觉表现力的关键要素。
+
+**核心原则：优先选择容易视觉化、具体可画的关键词**
+
+分析策略：
+1. 视觉实体：具体的物体、品种、类型（可以直接画出来的）
+2. 视觉特征：颜色、质感、形状、大小、材质
+3. 视觉场景：具体的环境、光线、时间、天气
+4. 视觉动作：姿态、表情、动作、状态
+5. 视觉风格：艺术风格、摄影技法、绘画手法
+6. 视觉情感：通过视觉元素表达的情感（而非抽象概念）
+
+关键词类型（按视觉化程度排序）：
+- visual_object: 具体视觉物体（品种、类型、物品、服装、配饰）
+- visual_feature: 视觉特征（颜色、质感、形状、材质、光线）
+- visual_scene: 视觉场景（环境、背景、时间、天气、地点）
+- visual_action: 视觉动作（姿态、表情、动作、状态）
+- visual_style: 视觉风格（艺术风格、摄影技法、构图方式）
+- visual_emotion: 视觉化情感（通过表情、姿态、色彩表达的情感）
+
+**重要提醒**：
+- 避免抽象概念（如"哲学思考"、"社会意义"、"心理状态"）
+- 优先选择有明确视觉特征的词汇
+- 关注图像生成模型容易理解的描述
+- 每个关键词都应该能够直接转化为视觉元素
+
+严格按照JSON格式返回：
+{"keywords": [{"text": "关键词", "type": "类型", "description": "视觉化描述", "visual_strength": "high/medium/low"}]}
+
+示例：
+输入："小猫"
+输出：{"keywords": [
+  {"text": "英短猫", "type": "visual_object", "description": "圆脸、短毛、蓝灰色毛发的具体猫品种", "visual_strength": "high"},
+  {"text": "毛茸茸质感", "type": "visual_feature", "description": "柔软蓬松的毛发质感，可通过细腻笔触表现", "visual_strength": "high"},
+  {"text": "蜷缩姿态", "type": "visual_action", "description": "小猫典型的睡觉姿势，身体蜷成球状", "visual_strength": "high"},
+  {"text": "粉色鼻子", "type": "visual_feature", "description": "小猫鼻子的典型颜色特征", "visual_strength": "high"},
+  {"text": "阳光窗台", "type": "visual_scene", "description": "温暖的阳光透过窗户洒在窗台上", "visual_strength": "high"},
+  {"text": "慵懒表情", "type": "visual_emotion", "description": "半闭眼睛、放松的面部表情", "visual_strength": "medium"}
+]}
+
+输入："美女"
+输出：{"keywords": [
+  {"text": "长发飘逸", "type": "visual_feature", "description": "柔顺的长发在风中飘动的视觉效果", "visual_strength": "high"},
+  {"text": "红唇", "type": "visual_feature", "description": "鲜艳的红色嘴唇，经典美女特征", "visual_strength": "high"},
+  {"text": "优雅姿态", "type": "visual_action", "description": "挺直的身姿、优美的手势", "visual_strength": "high"},
+  {"text": "丝质长裙", "type": "visual_object", "description": "光滑有光泽的丝绸材质连衣裙", "visual_strength": "high"},
+  {"text": "柔和光线", "type": "visual_scene", "description": "温暖柔和的打光效果", "visual_strength": "high"},
+  {"text": "自信微笑", "type": "visual_emotion", "description": "嘴角上扬的自信笑容", "visual_strength": "medium"}
+]}"""
+
+    try:
+        # 直接调用AI，不检查缓存
+        response = await ai_client.generate_text(
+            f"请分析以下提示词并提取关键要素：{prompt}",
+            system_prompt
+        )
+        
+        # 尝试解析JSON
+        result = safe_json_parse(response)
+        if result and 'keywords' in result:
+            keywords = result['keywords']
+            logger.info(f"强制重新生成关键词: {prompt[:50]}... -> {len(keywords)}个关键词")
+            return keywords
+        
+        # 如果JSON解析失败，生成创意关键词
+        keywords = generate_creative_keywords(prompt)
+        logger.info(f"强制重新生成关键词(备用方案): {prompt[:50]}... -> {len(keywords)}个关键词")
+        return keywords
+        
+    except Exception as e:
+        logger.error(f"强制关键词提取失败: {e}")
+        # 生成备用创意关键词
+        keywords = generate_creative_keywords(prompt)
+        return keywords
 
 async def extract_keywords(prompt: str) -> list:
     """提取提示词关键点 - 专注视觉化表达和图像生成优化"""
@@ -1763,15 +1896,33 @@ def create_tree():
 @app.route('/api/check_task/<task_id>')
 def check_task(task_id):
     """检查任务状态"""
-    task = db.get_task(task_id)
-    if not task:
-        return jsonify({"status": "not_found"})
-    
-    return jsonify({
-        "status": task['status'],
-        "result": task['result'],
-        "error": task['error']
-    })
+    try:
+        # 验证task_id格式
+        if not task_id or task_id == 'undefined' or task_id == 'null':
+            logger.warning(f"收到无效的task_id: {task_id}")
+            return jsonify({
+                "status": "invalid_task_id",
+                "error": "无效的任务ID"
+            }), 400
+        
+        task = db.get_task(task_id)
+        if not task:
+            logger.warning(f"任务不存在: {task_id}")
+            return jsonify({"status": "not_found"})
+        
+        logger.debug(f"任务状态查询: {task_id} -> {task['status']}")
+        return jsonify({
+            "status": task['status'],
+            "result": task['result'],
+            "error": task['error']
+        })
+        
+    except Exception as e:
+        logger.error(f"检查任务状态失败 {task_id}: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
 
 @app.route('/api/generate_branches', methods=['POST'])
 def generate_branches():
@@ -2117,17 +2268,28 @@ def test_keywords():
     """测试关键词提取"""
     data = request.json
     prompt = data.get('prompt', '')
+    force_regenerate = data.get('force_regenerate', False)  # 是否强制重新生成
     
     if not prompt:
         return jsonify({'error': '提示词不能为空'}), 400
     
     try:
-        keywords = run_async(extract_keywords(prompt))
+        if force_regenerate:
+            # 强制重新生成，绕过缓存
+            keywords = run_async(extract_keywords_force(prompt))
+            message = "强制重新生成关键词"
+        else:
+            # 正常提取，使用缓存
+            keywords = run_async(extract_keywords(prompt))
+            message = "关键词提取完成"
+            
         return jsonify({
             'success': True,
             'prompt': prompt,
             'keywords': keywords,
-            'count': len(keywords)
+            'count': len(keywords),
+            'message': message,
+            'force_regenerate': force_regenerate
         })
     except Exception as e:
         return jsonify({
@@ -2144,13 +2306,19 @@ def force_extract_keywords(tree_id, node_id):
         return jsonify({'error': '节点不存在'}), 404
     
     try:
-        keywords = run_async(extract_keywords(node_data['prompt']))
+        # 强制重新生成，绕过缓存
+        keywords = run_async(extract_keywords_force(node_data['prompt']))
         db.update_node(node_id, keywords=keywords)
+        
+        # 更新缓存为新的关键词
+        db.cache_keywords(node_data['prompt'], keywords)
+        
         return jsonify({
             'success': True,
             'node_id': node_id,
             'keywords': keywords,
-            'count': len(keywords)
+            'count': len(keywords),
+            'message': '关键词已重新生成并更新缓存'
         })
     except Exception as e:
         return jsonify({
@@ -2381,77 +2549,124 @@ def delete_tree(tree_id):
 @app.route('/api/auto_extract_keywords/<tree_id>')
 def auto_extract_keywords(tree_id):
     """自动为树中缺少关键词的节点提取关键词"""
-    tree_data = db.get_tree(tree_id)
-    if not tree_data:
-        return jsonify({'error': '生成树不存在'}), 404
-    
-    # 找到需要提取关键词的节点
-    nodes_to_extract = []
-    for node_id, node in tree_data['nodes'].items():
-        # 如果节点有图像但没有关键词，或者关键词为空
-        if (node['image_data'] or node['status'] == 'completed') and (not node['keywords'] or len(node['keywords']) == 0):
-            nodes_to_extract.append({
-                'node_id': node_id,
-                'prompt': node['prompt'],
-                'status': node['status']
+    try:
+        logger.info(f"开始批量提取关键词，树ID: {tree_id}")
+        
+        tree_data = db.get_tree(tree_id)
+        if not tree_data:
+            logger.warning(f"树不存在: {tree_id}")
+            return jsonify({'success': False, 'error': '生成树不存在'}), 404
+        
+        # 找到需要提取关键词的节点
+        nodes_to_extract = []
+        for node_id, node in tree_data['nodes'].items():
+            # 如果节点有图像但没有关键词，或者关键词为空
+            if (node['image_data'] or node['status'] == 'completed') and (not node['keywords'] or len(node['keywords']) == 0):
+                nodes_to_extract.append({
+                    'node_id': node_id,
+                    'prompt': node['prompt'],
+                    'status': node['status']
+                })
+        
+        logger.info(f"找到 {len(nodes_to_extract)} 个需要提取关键词的节点")
+        
+        if not nodes_to_extract:
+            return jsonify({
+                'success': True,
+                'message': '所有节点都已有关键词',
+                'extracted_count': 0,
+                'nodes_to_extract': 0,
+                'total_nodes': len(tree_data['nodes'])
             })
-    
-    if not nodes_to_extract:
+        
+        # 创建批量关键词提取任务
+        task_id = db.create_task(tree_id, 'batch_extract_keywords', None)
+        logger.info(f"创建批量提取任务: {task_id}")
+        
+        def batch_extract_keywords():
+            try:
+                logger.info(f"开始执行批量提取任务: {task_id}")
+                db.update_task(task_id, 'running')
+                extracted_count = 0
+                
+                for node_info in nodes_to_extract:
+                    try:
+                        node_id = node_info['node_id']
+                        prompt = node_info['prompt']
+                        
+                        logger.info(f"批量提取关键词: 节点 {node_id}")
+                        keywords = run_async(extract_keywords_force(prompt))  # 使用强制提取，绕过缓存
+                        db.update_node(node_id, keywords=keywords)
+                        extracted_count += 1
+                        logger.info(f"节点 {node_id} 关键词提取完成，共 {len(keywords)} 个关键词")
+                        
+                    except Exception as e:
+                        logger.error(f"节点 {node_id} 关键词提取失败: {e}")
+                        # 使用备用关键词
+                        backup_keywords = generate_creative_keywords(prompt)
+                        db.update_node(node_id, keywords=backup_keywords)
+                        extracted_count += 1
+                
+                db.update_task(task_id, 'completed', {
+                    'extracted_count': extracted_count,
+                    'total_nodes': len(nodes_to_extract),
+                    'success': True
+                })
+                
+                logger.info(f"批量关键词提取完成: {extracted_count}/{len(nodes_to_extract)} 个节点")
+                
+            except Exception as e:
+                logger.error(f"批量关键词提取失败: {e}")
+                db.update_task(task_id, 'failed', error=str(e))
+        
+        # 提交后台任务
+        executor.submit(batch_extract_keywords)
+        
         return jsonify({
             'success': True,
-            'message': '所有节点都已有关键词',
-            'extracted_count': 0,
+            'task_id': task_id,
+            'message': f'开始为 {len(nodes_to_extract)} 个节点提取关键词',
+            'nodes_to_extract': len(nodes_to_extract),
             'total_nodes': len(tree_data['nodes'])
         })
-    
-    # 创建批量关键词提取任务
-    task_id = db.create_task(tree_id, 'batch_extract_keywords', None)
-    
-    def batch_extract_keywords():
-        try:
-            db.update_task(task_id, 'running')
-            extracted_count = 0
-            
-            for node_info in nodes_to_extract:
-                try:
-                    node_id = node_info['node_id']
-                    prompt = node_info['prompt']
-                    
-                    logger.info(f"批量提取关键词: 节点 {node_id}")
-                    keywords = run_async(extract_keywords(prompt))
-                    db.update_node(node_id, keywords=keywords)
-                    extracted_count += 1
-                    logger.info(f"节点 {node_id} 关键词提取完成，共 {len(keywords)} 个关键词")
-                    
-                except Exception as e:
-                    logger.error(f"节点 {node_id} 关键词提取失败: {e}")
-                    # 使用备用关键词
-                    backup_keywords = generate_creative_keywords(prompt)
-                    db.update_node(node_id, keywords=backup_keywords)
-                    extracted_count += 1
-            
-            db.update_task(task_id, 'completed', {
-                'extracted_count': extracted_count,
-                'total_nodes': len(nodes_to_extract),
-                'success': True
-            })
-            
-            logger.info(f"批量关键词提取完成: {extracted_count}/{len(nodes_to_extract)} 个节点")
-            
-        except Exception as e:
-            logger.error(f"批量关键词提取失败: {e}")
-            db.update_task(task_id, 'failed', error=str(e))
-    
-    # 提交后台任务
-    executor.submit(batch_extract_keywords)
-    
-    return jsonify({
-        'success': True,
-        'task_id': task_id,
-        'message': f'开始为 {len(nodes_to_extract)} 个节点提取关键词',
-        'nodes_to_extract': len(nodes_to_extract),
-        'total_nodes': len(tree_data['nodes'])
-    })
+        
+    except Exception as e:
+        logger.error(f"批量提取关键词API失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ==================== 数据库管理 API ====================
+
+@app.route('/api/database/stats', methods=['GET'])
+def get_database_stats():
+    """获取数据库统计信息"""
+    try:
+        stats = db.get_database_stats()
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        logger.error(f"获取数据库统计失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/database/reset', methods=['POST'])
+def reset_database():
+    """重置数据库：清空所有数据并收缩数据库"""
+    try:
+        result = db.reset_database()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"数据库重置失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     # 创建输出目录
